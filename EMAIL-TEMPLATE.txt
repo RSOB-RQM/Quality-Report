@@ -1,0 +1,39 @@
+Subject: RSOB Quality Performance Dashboard - Now Available (Self-Service)
+
+Hi Team,
+
+I'm excited to share the RSOB Quality Performance Dashboard — a self-service tool where you can check your quality performance, defect rates, common errors, and best practices anytime.
+
+HOW TO ACCESS:
+==============
+1. Download the attached zip file: RSOB-Quality-Dashboard.zip
+2. Extract it to any folder on your desktop
+3. Double-click "OPEN-DASHBOARD.bat"
+4. Your browser will open automatically
+5. Enter your login ID (same as your corporate login) and click Sign In
+
+WHAT YOU'LL SEE:
+================
+- Your weekly & monthly defect rate trends
+- Error attribute breakdown (ADM, RA, RRC, ACC, RV)
+- Common defect patterns at process level & individual level
+- Best practices to avoid errors
+- Week-over-week comparison
+- Raw audit data for your transactions
+
+Managers will see their team's performance summary, associate-wise breakdown, and repeated defaulter tracking.
+
+FILTERS AVAILABLE:
+==================
+- Region: NA / EU / Both
+- Weeks: Last 4 weeks, Last 8 weeks, All, or individual week
+- Month: January through April
+
+Data is updated weekly. You'll receive the updated dashboard file each week.
+
+NOTE: Always open via "OPEN-DASHBOARD.bat" — do NOT double-click the HTML file directly.
+
+For any questions or issues, reach out to me.
+
+Thanks,
+[Your Name]
