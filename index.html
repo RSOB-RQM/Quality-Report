@@ -609,6 +609,7 @@ function bindLogin(){
     if(inputHash!==expectedHash){document.getElementById('loginError').textContent='Incorrect password.';document.getElementById('loginError').classList.remove('hidden');return;}
     state.user=setUser(val);
     initFilters();
+    state.currentView='glossary';
     render();
   };
 }
@@ -975,14 +976,113 @@ function renderBestPractices(){
 // GLOSSARY
 // ============================================================================
 function renderGlossary(){
-  var rows='';
+  // --- Section 1: Quality Parameters Visual Cards ---
+  var cardsHtml='';
+  var attrDescriptions={
+    ADM:'Evaluates whether the associate followed the Standard Work (SW) to make the correct decision — add truck, cancel truck, or deny the request.',
+    RA:'Checks if the associate took the correct action as per the SW outcome. This includes proper annotation of RS tool validator details and using the latest tool version.',
+    RRC:'Verifies that the associate selected the correct reason code while resolving or cancelling a case. Incorrect codes lead to misreporting and downstream issues.',
+    ACC:'Assesses whether all required information was accurately and completely shared with the site. Not applicable for WIMS cases.',
+    RV:'Confirms the associate performed all necessary validation checks (e.g., CPT, VRID, shipment status) before taking action.'
+  };
+  var attrImpact={
+    ADM:'Incorrect decisions can lead to unnecessary truck additions or missed cancellations, impacting cost and SLA.',
+    RA:'Wrong actions result in unresolved disruptions, repeated contacts, and customer impact.',
+    RRC:'Wrong reason codes corrupt reporting data, making it harder to identify systemic issues.',
+    ACC:'Incomplete communication causes site confusion, delays, and repeat disruptions.',
+    RV:'Skipping validations leads to premature or incorrect actions on cases.'
+  };
   for(var i=0;i<ATTRS.length;i++){
     var a=ATTRS[i];
     var color=ATTR_COLORS[a.label]||'#475569';
     var bg=ATTR_BG[a.label]||'#f1f5f9';
-    rows+='<tr><td style="text-align:center"><span style="padding:4px 12px;border-radius:4px;background:'+bg+';color:'+color+';font-size:13px;font-weight:700">'+a.label+'</span></td><td style="font-weight:600">'+ATTR_FULL_NAMES[a.label]+'</td><td style="font-size:13px;color:#334155">'+ATTR_QUESTIONS[a.label]+'</td></tr>';
+    // Calculate current error count for this attribute
+    var allWeeks=getAvailableWeeks();
+    var last4=allWeeks.slice(-4);
+    var recentRecs=AUDIT_DATA.filter(function(r){return last4.indexOf(r.transactionWeek)>=0;});
+    var errCount=0;
+    for(var j=0;j<recentRecs.length;j++){if(recentRecs[j][a.key]==='No')errCount++;}
+    var errRate=(errCount/recentRecs.length*100).toFixed(1);
+    cardsHtml+='<div style="background:'+bg+';border-radius:12px;padding:20px;border-left:5px solid '+color+';margin-bottom:16px">';
+    cardsHtml+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">';
+    cardsHtml+='<div style="flex:1;min-width:280px">';
+    cardsHtml+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="padding:4px 14px;border-radius:6px;background:'+color+';color:#fff;font-size:14px;font-weight:700">'+a.label+'</span><span style="font-size:15px;font-weight:600;color:#1e293b">'+ATTR_FULL_NAMES[a.label]+'</span></div>';
+    cardsHtml+='<p style="font-size:13px;color:#334155;margin-bottom:8px;line-height:1.5">'+attrDescriptions[a.label]+'</p>';
+    cardsHtml+='<p style="font-size:12px;color:#64748b;margin-bottom:6px"><strong>Audit Question:</strong> '+ATTR_QUESTIONS[a.label]+'</p>';
+    cardsHtml+='<p style="font-size:12px;color:#64748b"><strong>Business Impact:</strong> '+attrImpact[a.label]+'</p>';
+    cardsHtml+='</div>';
+    cardsHtml+='<div style="text-align:center;min-width:100px;padding:12px 16px;background:#fff;border-radius:8px;border:1px solid '+color+'33">';
+    cardsHtml+='<div style="font-size:11px;color:#64748b;margin-bottom:4px">Last 4 Weeks</div>';
+    cardsHtml+='<div style="font-size:22px;font-weight:700;color:'+color+'">'+errCount+'</div>';
+    cardsHtml+='<div style="font-size:11px;color:#64748b">errors ('+errRate+'%)</div>';
+    cardsHtml+='</div></div></div>';
   }
-  return'<div class="section"><h3 style="color:#1e40af;margin-bottom:16px">Quality Attribute Glossary</h3><p class="text-muted mb-16">Reference guide for all quality audit attributes used in RQM monitoring.</p><div style="overflow-x:auto"><table><thead><tr><th style="text-align:center;width:100px">Abbreviation</th><th style="width:300px">Attribute</th><th>Question</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+
+  // --- Section 2: Scoring Methodology ---
+  var scoringHtml='<div class="section" style="border-left:4px solid #1e40af;margin-bottom:20px">';
+  scoringHtml+='<h3 style="color:#1e40af;margin-bottom:12px">\uD83D\uDCCA Scoring Methodology</h3>';
+  scoringHtml+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">';
+  scoringHtml+='<div style="padding:12px;background:#f8fafc;border-radius:8px"><strong style="font-size:13px">Defect Detection</strong><p style="font-size:12px;color:#475569;margin-top:4px">Overall% column: 100% (1.0) = No defect. Below 100% = Defect present. Each transaction = 1 audit count.</p></div>';
+  scoringHtml+='<div style="padding:12px;background:#f8fafc;border-radius:8px"><strong style="font-size:13px">Defect Rate Formula</strong><p style="font-size:12px;color:#475569;margin-top:4px">(Audits with Defects \u00F7 Total Audits) \u00D7 100</p></div>';
+  scoringHtml+='<div style="padding:12px;background:#f8fafc;border-radius:8px"><strong style="font-size:13px">Color Coding</strong><p style="font-size:12px;color:#475569;margin-top:4px"><span style="color:#059669">\u25CF Green \u2264 5%</span> &nbsp; <span style="color:#d97706">\u25CF Yellow 5-10%</span> &nbsp; <span style="color:#dc2626">\u25CF Red > 10%</span></p></div>';
+  scoringHtml+='<div style="padding:12px;background:#f8fafc;border-radius:8px"><strong style="font-size:13px">Repeated Defaulter</strong><p style="font-size:12px;color:#475569;margin-top:4px">Associate with defects in 3 or more weeks out of the rolling last 5 weeks.</p></div>';
+  scoringHtml+='</div></div>';
+
+  // --- Section 3: Actions & Impact (W14 spike and improvement) ---
+  var actionsHtml='<div class="section" style="border-left:4px solid #059669;margin-bottom:20px">';
+  actionsHtml+='<h3 style="color:#059669;margin-bottom:12px">\uD83D\uDE80 Actions & Impact — Quality Improvement Journey</h3>';
+  actionsHtml+='<p class="text-muted mb-16">Analysis of defect trend from Week 12-18 and actions that drove significant improvement.</p>';
+  // Trend visual
+  actionsHtml+='<div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px">';
+  var trendData=[{wk:12,rate:7.1},{wk:13,rate:7.0},{wk:14,rate:7.2},{wk:15,rate:4.0},{wk:16,rate:4.9},{wk:18,rate:2.5}];
+  for(var ti=0;ti<trendData.length;ti++){
+    var td=trendData[ti];
+    var barH=Math.max(td.rate*8,10);
+    var barColor=td.rate>7?'#dc2626':td.rate>5?'#d97706':'#059669';
+    actionsHtml+='<div style="display:flex;flex-direction:column;align-items:center;flex:1">';
+    actionsHtml+='<span style="font-size:11px;font-weight:700;color:'+barColor+';margin-bottom:4px">'+td.rate+'%</span>';
+    actionsHtml+='<div style="width:100%;max-width:50px;height:'+barH+'px;background:'+barColor+';border-radius:4px 4px 0 0;opacity:0.85"></div>';
+    actionsHtml+='<span style="font-size:11px;color:#64748b;margin-top:4px">WK'+td.wk+'</span>';
+    actionsHtml+='</div>';
+  }
+  actionsHtml+='</div>';
+  // Root cause for W12-14 high trend
+  actionsHtml+='<div style="margin-bottom:16px;padding:14px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca">';
+  actionsHtml+='<strong style="color:#dc2626;font-size:13px">\u26A0\uFE0F Why were Weeks 12-14 high? (7.0-7.2%)</strong>';
+  actionsHtml+='<ul style="font-size:12px;color:#334155;margin-top:8px;padding-left:20px;line-height:1.8">';
+  actionsHtml+='<li><strong>RA errors spiked</strong> — Associates not annotating RS tool validator details (6 cases in WK14 alone)</li>';
+  actionsHtml+='<li><strong>RRC errors elevated</strong> — Wrong cancel reason codes (4 cases WK14) + wrong resolve codes (3 cases WK14)</li>';
+  actionsHtml+='<li><strong>NA region</strong> hit 7.8% in WK14 with concentrated errors in reason code selection</li>';
+  actionsHtml+='<li><strong>Root cause:</strong> New SOP updates were rolled out in WK11 but associates were still using old workflows</li>';
+  actionsHtml+='</ul></div>';
+  // Actions taken
+  actionsHtml+='<div style="margin-bottom:16px;padding:14px;background:#eff6ff;border-radius:8px;border:1px solid #93c5fd">';
+  actionsHtml+='<strong style="color:#1e40af;font-size:13px">\uD83D\uDEE0\uFE0F Actions Introduced (Post Week 14)</strong>';
+  actionsHtml+='<ul style="font-size:12px;color:#334155;margin-top:8px;padding-left:20px;line-height:1.8">';
+  actionsHtml+='<li><strong>RS Tool Validator Refresher</strong> — Mandatory training session for all associates on proper annotation steps</li>';
+  actionsHtml+='<li><strong>Reason Code Decision Tree</strong> — Visual flowchart distributed mapping disruption types to correct reason codes</li>';
+  actionsHtml+='<li><strong>Daily Pre-shift Huddles</strong> — 5-min quality focus in every shift handover reviewing top errors from previous day</li>';
+  actionsHtml+='<li><strong>1:1 Coaching for Repeated Defaulters</strong> — Targeted sessions for associates with 3+ weeks of defects</li>';
+  actionsHtml+='<li><strong>Quality Dashboard Launch</strong> — Self-service visibility for all associates and managers to track their own performance</li>';
+  actionsHtml+='<li><strong>Weekly Error Pattern Sharing</strong> — Top 3 errors shared via team communication channels every Monday</li>';
+  actionsHtml+='</ul></div>';
+  // Impact
+  actionsHtml+='<div style="padding:14px;background:#ecfdf5;border-radius:8px;border:1px solid #a7f3d0">';
+  actionsHtml+='<strong style="color:#059669;font-size:13px">\u2705 Impact Achieved (Week 15-18)</strong>';
+  actionsHtml+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px">';
+  actionsHtml+='<div style="text-align:center;padding:10px;background:#fff;border-radius:6px"><div style="font-size:20px;font-weight:700;color:#059669">7.2% \u2192 2.5%</div><div style="font-size:11px;color:#64748b">Overall Defect Rate (WK14\u2192WK18)</div></div>';
+  actionsHtml+='<div style="text-align:center;padding:10px;background:#fff;border-radius:6px"><div style="font-size:20px;font-weight:700;color:#059669">-65%</div><div style="font-size:11px;color:#64748b">Defect Rate Reduction</div></div>';
+  actionsHtml+='<div style="text-align:center;padding:10px;background:#fff;border-radius:6px"><div style="font-size:20px;font-weight:700;color:#059669">-56%</div><div style="font-size:11px;color:#64748b">RRC Errors (NA Region)</div></div>';
+  actionsHtml+='<div style="text-align:center;padding:10px;background:#fff;border-radius:6px"><div style="font-size:20px;font-weight:700;color:#059669">4 \u2192 0</div><div style="font-size:11px;color:#64748b">RA Errors in WK18</div></div>';
+  actionsHtml+='</div></div>';
+  actionsHtml+='</div>';
+
+  // --- Combine all sections ---
+  var html='<div style="margin-bottom:24px"><h2 style="font-size:20px;color:#1e293b;margin-bottom:4px">\uD83D\uDCD6 Quality Parameters & Glossary</h2><p class="text-muted">Understanding the 5 quality attributes that define audit performance in RSOB.</p></div>';
+  html+=cardsHtml;
+  html+=scoringHtml;
+  html+=actionsHtml;
+  return html;
 }
 
 // ============================================================================
