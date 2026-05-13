@@ -696,9 +696,9 @@ function renderNav(){
   const rawActive=state.currentView==='rawdata'?'active':'';
   const leaderActive=state.currentView==='leadership'?'active':'';
   const glossaryActive=state.currentView==='glossary'?'active':'';
-  var navLinks='<button class="nav-link '+dashActive+'" onclick="state.currentView=\'dashboard\';render()">Dashboard</button>';
+  var navLinks='<button class="nav-link '+glossaryActive+'" onclick="state.currentView=\'glossary\';render()">Glossary</button>';
+  navLinks+='<button class="nav-link '+dashActive+'" onclick="state.currentView=\'dashboard\';render()">Dashboard</button>';
   navLinks+='<button class="nav-link '+rawActive+'" onclick="state.currentView=\'rawdata\';render()">Raw Data</button>';
-  navLinks+='<button class="nav-link '+glossaryActive+'" onclick="state.currentView=\'glossary\';render()">Glossary</button>';
   if(user.role==='admin'){navLinks+='<button class="nav-link '+leaderActive+'" onclick="state.currentView=\'leadership\';render()">Leadership Report</button>';}
   return`<nav class="nav">
     <div style="display:flex;align-items:center;gap:20px">
