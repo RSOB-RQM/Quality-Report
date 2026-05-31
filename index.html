@@ -593,7 +593,7 @@ function render(){
   if(state.currentView==='leadership'){const report=computeLeadershipReport(AUDIT_DATA,state.leadershipRegion||'',state.leadershipWeek||'last4');app.innerHTML=renderNav()+'<div class="main">'+renderLeadershipReport(report)+'</div>';bindLeadership();return;}
   if(state.currentView==='glossary'){app.innerHTML=renderNav()+'<div class="main">'+renderGlossary()+'</div>';bindDashboard();return;}
   if(state.currentView==='escalations'){app.innerHTML=renderNav()+'<div class="main">'+renderEscalations()+'</div>';bindEscalations();return;}
-  if(state.currentView==='wowreport'){app.innerHTML=renderNav()+'<div class="main">'+renderWoWReport()+'</div>';return;}
+  if(state.currentView==='wowreport'){app.innerHTML=renderNav()+'<div class="main"><div class="section"><h3>Week-over-Week Report</h3><p class="text-muted">WoW report is generated via email. Use the Dashboard view for quality trends.</p></div></div>';return;}
   app.innerHTML=renderDashboard();bindDashboard();
 }
 }
