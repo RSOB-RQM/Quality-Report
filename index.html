@@ -1097,10 +1097,10 @@ function renderGlossary(){
   // --- Section 3: Actions & Impact (W14 spike and improvement) ---
   var actionsHtml='<div class="section" style="border-left:4px solid #059669;margin-bottom:20px">';
   actionsHtml+='<h3 style="color:#059669;margin-bottom:12px">\uD83D\uDE80 Actions & Impact â€” Quality Improvement Journey</h3>';
-  actionsHtml+='<p class="text-muted mb-16">Analysis of defect trend from Week 12-18 and actions that drove significant improvement.</p>';
+  actionsHtml+='<p class="text-muted mb-16">Analysis of defect trend from Week 16-21 showing sustained quality improvement.</p>';
   // Trend visual
   actionsHtml+='<div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px">';
-  var trendData=[{wk:12,rate:7.1},{wk:13,rate:7.0},{wk:14,rate:7.2},{wk:15,rate:4.0},{wk:16,rate:4.9},{wk:18,rate:2.5}];
+  var trendData=[{wk:16,rate:4.9},{wk:17,rate:3.2},{wk:18,rate:2.5},{wk:19,rate:1.8},{wk:20,rate:1.1},{wk:21,rate:0.4}];
   for(var ti=0;ti<trendData.length;ti++){
     var td=trendData[ti];
     var barH=Math.max(td.rate*8,10);
