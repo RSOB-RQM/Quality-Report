@@ -585,12 +585,6 @@ function initFilters(){
 // ============================================================================
 // RENDER ENGINE
 // ============================================================================
-function disruptionTooltip(dt){
-  const tips={'ADHOC Validation':'Validation of adhoc truck requests raised by sites for additional capacity beyond scheduled loads.',
-  'Cancel Validation':'Validation of cancellation requests where sites request to cancel a scheduled VRID/load.',
-  'Cancel & Replace Validation':'Validation where a scheduled load is cancelled and replaced with a new one due to operational changes.'};
-  return tips[dt]||dt;
-}
 function render(){
   const app=document.getElementById('app');
   state.user=getUser();
@@ -763,12 +757,12 @@ function renderNav(){
   const rawActive=state.currentView==='rawdata'?'active':'';
   const leaderActive=state.currentView==='leadership'?'active':'';
   const glossaryActive=state.currentView==='glossary'?'active':'';
-  const escalationActive=state.currentView==='escalations'?'active':'';
+  
   const wowActive=state.currentView==='wowreport'?'active':'';
   var navLinks='<button class="nav-link '+glossaryActive+'" onclick="state.currentView=\'glossary\';render()">Glossary</button>';
   navLinks+='<button class="nav-link '+dashActive+'" onclick="state.currentView=\'dashboard\';render()">Dashboard</button>';
   navLinks+='<button class="nav-link '+rawActive+'" onclick="state.currentView=\'rawdata\';render()">Raw Data</button>';
-  navLinks+='<button class="nav-link '+escalationActive+'" onclick="state.currentView=\'escalations\';render()">Escalations</button>';
+  
   navLinks+='<button class="nav-link '+wowActive+'" onclick="state.currentView=\'wowreport\';render()">WoW Report</button>';
   if(user.role==='admin'){navLinks+='<button class="nav-link '+leaderActive+'" onclick="state.currentView=\'leadership\';render()">Leadership Report</button>';}
   return`<nav class="nav">
@@ -1028,7 +1022,7 @@ function renderErrorDetailForAssociate(records){
   let rows=errorRecords.sort((a,b)=>b.transactionWeek-a.transactionWeek).map(r=>{
     const attrs=[];const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){attrs.push(attr.label);const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    return`<tr><td>WK ${r.transactionWeek}</td><td>${r.transactionDate}</td><td title="${disruptionTooltip(r.disruptionType)}">${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'â€”'}</td></tr>`;
+    return`<tr><td>WK ${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'â€”'}</td></tr>`;
   }).join('');
   return`<div class="section"><h3 style="margin-bottom:16px">Error Details</h3><div style="overflow-x:auto"><table><thead><tr><th>Week</th><th>Date</th><th>Disruption</th><th>Failed Attributes</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
@@ -1446,7 +1440,7 @@ function renderRawData(){
     const findStr=findings.join('; ')||'â€”';
     const rowClass=isDefect?'defect-row':'';
     function ynCell(val){return'<span class="yes-no '+(val==='Yes'?'yes':'no')+'">'+val+'</span>';}
-    return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td title="${disruptionTooltip(r.disruptionType)}">${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
+    return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td>${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
   }).join('');
 
   let pagination='';
@@ -1466,7 +1460,7 @@ function renderRawData(){
       <div style="display:flex;align-items:center;gap:6px"><input type="text" id="rawSearch" placeholder="Search associate loginâ€¦" value="${search}" style="padding:7px 12px;border:1px solid #dbeafe;border-radius:6px;font-size:13px;min-width:200px"><button class="csv-btn" onclick="rawSearchApply()">Search</button></div>
     </div>
     <div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0;background:#fff">
-      <table style="min-width:1200px"><thead><tr><th>Wk</th><th>Date</th><th>Region</th><th>Associate</th><th>Supervisor</th><th>Disruption Type</th><th style="text-align:center">ADM</th><th style="text-align:center">RA</th><th style="text-align:center">RRC</th><th style="text-align:center">ACC</th><th style="text-align:center">RV</th><th style="text-align:center">Defect</th><th style="min-width:250px">Findings</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <table style="min-width:1200px"><thead><tr><th>Wk</th><th>Date</th><th>Region</th><th>Associate</th><th>Supervisor</th><th>Disruption Type</th><th style="text-align:center" title="Associate Decision Making - Was the SW followed to arrive at the decision?">ADM</th><th style="text-align:center" title="SW Adherence Right Action - Was the right action taken as per SW outcome?">RA</th><th style="text-align:center" title="Right Reason Code - Was the correct reason code used?">RRC</th><th style="text-align:center" title="Accurate & Complete Communication - Was required information shared with the site?">ACC</th><th style="text-align:center" title="Required Validation - Did the associate do all necessary checks?">RV</th><th style="text-align:center">Defect</th><th style="min-width:250px">Findings</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>
     ${pagination}
   </div>`;
