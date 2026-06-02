@@ -879,12 +879,12 @@ function renderWeekSummaryTable(rows){
 function renderTrendChart(weekly,monthly){
   const weeklyRates=weekly.map(w=>({label:'Wk '+w.week,rate:computeRate(w.totalDefects,w.totalAudited)}));
   const monthlyRates=monthly.map(m=>({label:MONTH_NAMES[m.month]+' '+m.year,rate:m.defectRate}));
-  function trendIcon(prev,curr){if(curr<prev)return'<span style="color:#059669;font-weight:600"></span>';if(curr>prev)return'<span style="color:#dc2626;font-weight:600"></span>';return'<span style="color:#64748b">â€”</span>';}
+  function trendIcon(prev,curr){if(curr<prev)return'<span style="color:#059669;font-weight:600"></span>';if(curr>prev)return'<span style="color:#dc2626;font-weight:600"></span>';return'<span style="color:#64748b">-</span>';}
   function buildTable(rates,title){
     if(rates.length===0)return'<p class="text-muted">No data available.</p>';
     let rows=rates.map((item,idx)=>{
       const prev=idx>0?rates[idx-1].rate:null;
-      const trend=prev!==null?trendIcon(prev,item.rate):'â€”';
+      const trend=prev!==null?trendIcon(prev,item.rate):'-';
       return`<tr><td>${item.label}</td><td style="font-weight:600;color:${rateColor(item.rate)}">${item.rate}%</td>${rates.length>=2?'<td>'+trend+'</td>':''}</tr>`;
     }).join('');
     return`<table><thead><tr><th>Period</th><th>Defect Rate</th>${rates.length>=2?'<th>Trend</th>':''}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -917,11 +917,11 @@ function renderAssociateSummary(summaries,repeatedDefaulters){
   let rows=sorted.map((row,idx)=>{
     const isDefaulter=defaulterSet.has(row.associateLogin);
     const isExpanded=state.expandedAssociates.has(row.associateLogin);
-    const trendIcons={improving:{icon:'',color:'#059669'},regressing:{icon:'',color:'#dc2626'},stable:{icon:'â€”',color:'#64748b'}};
+    const trendIcons={improving:{icon:'',color:'#059669'},regressing:{icon:'',color:'#dc2626'},stable:{icon:'-',color:'#64748b'}};
     const t=trendIcons[row.trend]||trendIcons.stable;
     const rowBg=isDefaulter?'background:#fef2f2':'';
     const badges=row.errorAttributes.slice(0,3).map(a=>'<span class="badge badge-'+a.attribute.toLowerCase()+'">'+a.attribute+'('+a.count+')</span>').join('');
-    const expandBtn=row.topFindings.length>0?`<button class="expand-btn ${isExpanded?'active':''}" onclick="toggleAssociate('${row.associateLogin}')">${isExpanded?'Hide':'Show'} Findings</button>`:'<span style="color:#94a3b8;font-size:11px">â€”</span>';
+    const expandBtn=row.topFindings.length>0?`<button class="expand-btn ${isExpanded?'active':''}" onclick="toggleAssociate('${row.associateLogin}')">${isExpanded?'Hide':'Show'} Findings</button>`:'<span style="color:#94a3b8;font-size:11px">-</span>';
     // Actions column content
     var actionsCell='';
     if(isManagerOrAdmin){
@@ -967,7 +967,7 @@ function renderAssociateSummary(summaries,repeatedDefaulters){
 }
 
 function renderRepeatedDefaulters(defaulters){
-  if(defaulters.length===0)return`<div class="section section-red"><h3 style="color:#dc2626">Repeated Defaulters</h3><p class="text-muted">No repeated defaulters found â€” great team performance!</p></div>`;
+  if(defaulters.length===0)return`<div class="section section-red"><h3 style="color:#dc2626">Repeated Defaulters</h3><p class="text-muted">No repeated defaulters found - great team performance!</p></div>`;
   const isManagerOrAdmin=state.user.role!=='associate';
   const allWeeks=[...new Set(defaulters.flatMap(d=>d.weeklyDefects.map(w=>w.week)))].sort((a,b)=>a-b);
   let thead='<th style="text-align:left">Associate</th><th>Weeks</th>'+allWeeks.map(w=>'<th>WK '+w+'</th>').join('');
@@ -975,7 +975,7 @@ function renderRepeatedDefaulters(defaulters){
   let tbody=defaulters.map(d=>{
     const weekMap=new Map(d.weeklyDefects.map(w=>[w.week,w.defectCount]));
     let cells='<td style="text-align:left;font-weight:600">'+d.associateLogin+'</td><td style="font-weight:600;color:#dc2626">'+d.totalWeeksWithDefects+'</td>';
-    cells+=allWeeks.map(w=>{const c=weekMap.get(w)||0;return'<td style="font-weight:'+(c>0?'600':'400')+';color:'+(c>0?'#dc2626':'#94a3b8')+'">'+(c>0?c:'â€”')+'</td>';}).join('');
+    cells+=allWeeks.map(w=>{const c=weekMap.get(w)||0;return'<td style="font-weight:'+(c>0?'600':'400')+';color:'+(c>0?'#dc2626':'#94a3b8')+'">'+(c>0?c:'-')+'</td>';}).join('');
     if(isManagerOrAdmin){
       cells+='<td><button class="ems-btn" onclick="openEmsLink(\''+d.associateLogin+'\')">EMS</button></td>';
     }
@@ -997,7 +997,7 @@ function renderErrorBreakdown(breakdown){
 }
 
 function renderCommonFindings(weekFindings){
-  if(weekFindings.length===0)return'<div class="section"><h3>Common Findings</h3><p class="text-muted">No errors recorded â€” great work!</p></div>';
+  if(weekFindings.length===0)return'<div class="section"><h3>Common Findings</h3><p class="text-muted">No errors recorded - great work!</p></div>';
   // Build a flat table: Week | Attribute | Finding | Count
   var tableRows=[];
   for(var wi=0;wi<weekFindings.length;wi++){
@@ -1018,11 +1018,11 @@ function renderCommonFindings(weekFindings){
 
 function renderErrorDetailForAssociate(records){
   const errorRecords=records.filter(r=>countErrors(r)>0);
-  if(errorRecords.length===0)return'<div class="section"><h3>Error Details</h3><p class="text-muted">No errors found â€” keep up the great work!</p></div>';
+  if(errorRecords.length===0)return'<div class="section"><h3>Error Details</h3><p class="text-muted">No errors found - keep up the great work!</p></div>';
   let rows=errorRecords.sort((a,b)=>b.transactionWeek-a.transactionWeek).map(r=>{
     const attrs=[];const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){attrs.push(attr.label);const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    return`<tr><td>WK ${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'â€”'}</td></tr>`;
+    return`<tr><td>WK ${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'-'}</td></tr>`;
   }).join('');
   return`<div class="section"><h3 style="margin-bottom:16px">Error Details</h3><div style="overflow-x:auto"><table><thead><tr><th>Week</th><th>Date</th><th>Disruption</th><th>Failed Attributes</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
@@ -1045,7 +1045,7 @@ function renderGlossary(){
   // --- Section 1: Quality Parameters Visual Cards ---
   var cardsHtml='';
   var attrDescriptions={
-    ADM:'Evaluates whether the associate followed the Standard Work (SW) to make the correct decision â€” add truck, cancel truck, or deny the request.',
+    ADM:'Evaluates whether the associate followed the Standard Work (SW) to make the correct decision - add truck, cancel truck, or deny the request.',
     RA:'Checks if the associate took the correct action as per the SW outcome. This includes proper annotation of RS tool validator details and using the latest tool version.',
     RRC:'Verifies that the associate selected the correct reason code while resolving or cancelling a case. Incorrect codes lead to misreporting and downstream issues.',
     ACC:'Assesses whether all required information was accurately and completely shared with the site. Not applicable for WIMS cases.',
@@ -1096,7 +1096,7 @@ function renderGlossary(){
 
   // --- Section 3: Actions & Impact (W14 spike and improvement) ---
   var actionsHtml='<div class="section" style="border-left:4px solid #059669;margin-bottom:20px">';
-  actionsHtml+='<h3 style="color:#059669;margin-bottom:12px">\uD83D\uDE80 Actions & Impact â€” Quality Improvement Journey</h3>';
+  actionsHtml+='<h3 style="color:#059669;margin-bottom:12px">\uD83D\uDE80 Actions & Impact - Quality Improvement Journey</h3>';
   actionsHtml+='<p class="text-muted mb-16">Analysis of defect trend from Week 16-21 showing sustained quality improvement.</p>';
   // Trend visual
   actionsHtml+='<div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px">';
@@ -1116,21 +1116,21 @@ function renderGlossary(){
   actionsHtml+='<div style="margin-bottom:16px;padding:14px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca">';
   actionsHtml+='<strong style="color:#dc2626;font-size:13px">\u26A0\uFE0F Why were Weeks 12-14 high? (7.0-7.2%)</strong>';
   actionsHtml+='<ul style="font-size:12px;color:#334155;margin-top:8px;padding-left:20px;line-height:1.8">';
-  actionsHtml+='<li><strong>RA errors spiked</strong> â€” Associates not annotating RS tool validator details (6 cases in WK14 alone)</li>';
-  actionsHtml+='<li><strong>RRC errors elevated</strong> â€” Wrong cancel reason codes (4 cases WK14) + wrong resolve codes (3 cases WK14)</li>';
+  actionsHtml+='<li><strong>RA errors spiked</strong> - Associates not annotating RS tool validator details (6 cases in WK14 alone)</li>';
+  actionsHtml+='<li><strong>RRC errors elevated</strong> - Wrong cancel reason codes (4 cases WK14) + wrong resolve codes (3 cases WK14)</li>';
   actionsHtml+='<li><strong>NA region</strong> hit 7.8% in WK14 with concentrated errors in reason code selection</li>';
   actionsHtml+='<li><strong>Root cause:</strong> New SOP updates were rolled out in WK11 but associates were still using old workflows</li>';
   actionsHtml+='</ul></div>';
   // Actions taken
   actionsHtml+='<div style="margin-bottom:16px;padding:14px;background:#eff6ff;border-radius:8px;border:1px solid #93c5fd">';
-  actionsHtml+='<strong style="color:#1e40af;font-size:13px">\uD83D\uDEE0\uFE0F Actions Introduced (Post Week 14)</strong>';
+  actionsHtml+='<strong style="color:#1e40af;font-size:13px">Actions Introduced (Post Week 14)</strong>';
   actionsHtml+='<ul style="font-size:12px;color:#334155;margin-top:8px;padding-left:20px;line-height:1.8">';
-  actionsHtml+='<li><strong>RS Tool Validator Refresher</strong> â€” Mandatory training session for all associates on proper annotation steps</li>';
-  actionsHtml+='<li><strong>Reason Code Decision Tree</strong> â€” Visual flowchart distributed mapping disruption types to correct reason codes</li>';
-  actionsHtml+='<li><strong>Daily Pre-shift Huddles</strong> â€” 5-min quality focus in every shift handover reviewing top errors from previous day</li>';
-  actionsHtml+='<li><strong>1:1 Coaching for Repeated Defaulters</strong> â€” Targeted sessions for associates with 3+ weeks of defects</li>';
-  actionsHtml+='<li><strong>Quality Dashboard Launch</strong> â€” Self-service visibility for all associates and managers to track their own performance</li>';
-  actionsHtml+='<li><strong>Weekly Error Pattern Sharing</strong> â€” Top 3 errors shared via team communication channels every Monday</li>';
+  actionsHtml+='<li><strong>CASA Reason Code Best Practices</strong> - Shared revised reason code guidelines via flyers with L3+ group</li>';
+  actionsHtml+='<li><strong>Validator Compliance Drive</strong> - Informed associates to ensure latest validator is downloaded and to monitor Slack/ops support channels for updates</li>';
+  actionsHtml+='<li><strong>Repeated Outlier Alerts</strong> - Shared outlier alerts with respective managers for close-loop action</li>';
+  actionsHtml+='<li><strong>Feedback Completion Drive</strong> - Rigorous drive with managers; achieved 100% WoW feedback (impacted by Zeus migration, working with quality team to fix)</li>';
+  actionsHtml+='<li><strong>Quality Dashboard Launch (In Progress)</strong> - Self-service visibility for all associates and managers to track performance</li>';
+  actionsHtml+='<li><strong>Weekly Error Pattern Sharing</strong> - Top 3 errors shared via team communication channels every Monday</li>';
   actionsHtml+='</ul></div>';
   // Impact
   actionsHtml+='<div style="padding:14px;background:#ecfdf5;border-radius:8px;border:1px solid #a7f3d0">';
@@ -1437,7 +1437,7 @@ function renderRawData(){
     const isDefect=r.defectFlag;
     const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    const findStr=findings.join('; ')||'â€”';
+    const findStr=findings.join('; ')||'-';
     const rowClass=isDefect?'defect-row':'';
     function ynCell(val){return'<span class="yes-no '+(val==='Yes'?'yes':'no')+'">'+val+'</span>';}
     return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td>${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
@@ -1445,11 +1445,11 @@ function renderRawData(){
 
   let pagination='';
   if(totalPages>1){
-    pagination=`<div class="pagination"><button class="page-btn" ${page<=1?'disabled':''} onclick="rawPage(${page-1})">Previous</button><span class="text-sm" style="color:#475569">Page ${page} of ${totalPages}</span><button class="page-btn" ${page>=totalPages?'disabled':''} onclick="rawPage(${page+1})">Next -></button></div>`;
+    pagination=`<div class="pagination"><button class="page-btn" ${page<=1?'disabled':''} onclick="rawPage(${page-1})"> Previous</button><span class="text-sm" style="color:#475569">Page ${page} of ${totalPages}</span><button class="page-btn" ${page>=totalPages?'disabled':''} onclick="rawPage(${page+1})">Next -></button></div>`;
   }
 
   return renderNav()+`<div class="main">
-    <div style="margin-bottom:16px"><button class="nav-link" style="background:#eff6ff;color:#1e40af;border:1px solid #dbeafe" onclick="state.currentView='dashboard';render()">Back to Dashboard</button></div>
+    <div style="margin-bottom:16px"><button class="nav-link" style="background:#eff6ff;color:#1e40af;border:1px solid #dbeafe" onclick="state.currentView='dashboard';render()"> Back to Dashboard</button></div>
     <h2 style="font-size:20px;font-weight:700;margin-bottom:16px">Raw Audit Data <span class="text-muted" style="font-weight:400;margin-left:12px">${totalCount} record${totalCount!==1?'s':''}</span></h2>
     <div style="margin-bottom:16px"><button class="csv-btn" onclick="downloadRawData()">Download CSV (current page)</button></div>
     <div class="filter-bar">
@@ -1548,7 +1548,7 @@ function showToast(msg) {
 function copyLeadershipReport() {
   var report = computeLeadershipReport(AUDIT_DATA, state.leadershipRegion || '', state.leadershipWeek || 'last4');
   var text = '';
-  text += '=== Leadership Analysis Report â€” NA & EU ===\n\n';
+  text += '=== Leadership Analysis Report - NA & EU ===\n\n';
 
   // Region Summary
   text += '--- Region Summary ---\n';
@@ -1858,7 +1858,7 @@ function getFeedbackStatus(managerLogin, weekNumber) {
       return JSON.parse(raw);
     }
   } catch (e) {
-    // localStorage disabled or corrupted JSON â€” try in-memory fallback
+    // localStorage disabled or corrupted JSON - try in-memory fallback
     if (_feedbackMemory[key]) {
       return _feedbackMemory[key];
     }
@@ -1877,7 +1877,7 @@ function setFeedbackShared(managerLogin, weekNumber, associateLogin) {
   try {
     localStorage.setItem(key, JSON.stringify(status));
   } catch (e) {
-    // QuotaExceededError or localStorage disabled â€” fall back to in-memory
+    // QuotaExceededError or localStorage disabled - fall back to in-memory
     _feedbackMemory[key] = status;
   }
 }
@@ -1895,7 +1895,7 @@ function initFeedbackTracker(managerLogin, weekNumber, associateLogins) {
   try {
     localStorage.setItem(key, JSON.stringify(status));
   } catch (e) {
-    // QuotaExceededError or localStorage disabled â€” fall back to in-memory
+    // QuotaExceededError or localStorage disabled - fall back to in-memory
     _feedbackMemory[key] = status;
   }
 }
@@ -1974,7 +1974,7 @@ function renderEscalations(){
 
   // Input form
   const inputForm=`<div class="section" style="border-left:4px solid #059669">
-    <h3 style="color:#059669;margin-bottom:16px">Add Escalation Data</h3>
+    <h3 style="color:#059669;margin-bottom:16px"> Add Escalation Data</h3>
     <p class="text-muted mb-8">Enter escalation ticket counts from TT (t.corp.amazon.com) for Reactive Scheduling Managers group.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
       <label style="font-size:13px;color:#475569;display:flex;flex-direction:column;gap:4px">Year
