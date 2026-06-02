@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -900,7 +900,7 @@ function renderAssociateSummary(summaries,repeatedDefaulters){
     if(state.sortKey==='associateLogin')return state.sortAsc?a.associateLogin.localeCompare(b.associateLogin):b.associateLogin.localeCompare(a.associateLogin);
     return state.sortAsc?a[state.sortKey]-b[state.sortKey]:b[state.sortKey]-a[state.sortKey];
   });
-  const sortInd=(key)=>state.sortKey===key?(state.sortAsc?' â–²':' â–¼'):'';
+  const sortInd=(key)=>state.sortKey===key?(state.sortAsc?' â-²':' â-¼'):'';
   // Determine current/most recent week and selected week for feedback tracking
   const allDataWeeks=getAvailableWeeks();
   const mostRecentWeek=allDataWeeks.length>0?allDataWeeks[allDataWeeks.length-1]:0;
