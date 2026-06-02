@@ -687,7 +687,7 @@ if(user.role!=='associate'){
       mData.shared=sharedCount;
     }
     // Only show if user is admin or the manager themselves
-    if(user.role==='admin'||(user.role==='admin'&&state.adminTab==='process')){
+    if(user.role==='admin'||user.role==='manager'){
       var fbHtml='<div class="section" style="border-left:4px solid #7c3aed"><h3 style="color:#7c3aed">Feedback Completion % (Week '+lastFeedbackWeek+')</h3><table><thead><tr><th>Manager</th><th style="text-align:center">Team Size</th><th style="text-align:center">Feedback Shared</th><th style="text-align:center">Completion %</th></tr></thead><tbody>';
       for(var fbEntry of mgrMap){
         var fbMgr=fbEntry[0];var fbD=fbEntry[1];
@@ -698,7 +698,24 @@ if(user.role!=='associate'){
         fbHtml+='<tr><td style="font-weight:600">'+fbMgr+'</td><td style="text-align:center">'+teamSize+'</td><td style="text-align:center">'+fbD.shared+'</td><td style="text-align:center;font-weight:700;color:'+fbColor+'">'+fbPct+'%</td></tr>';
       }
       fbHtml+='</tbody></table><p class="text-muted" style="margin-top:8px">Tracking starts from Week 21. Completion updates when managers use the Feedback/Appreciate email buttons.</p></div>';
-      content+=fbHtml;
+      
+    // Manager view: show associate-wise feedback for their team
+    if(user.role==='manager'){
+      var myAssocs=new Set(fRecords.filter(function(r){return r.supervisorLogin===user.login;}).map(function(r){return r.associateLogin;}));
+      var fStatus=getFeedbackStatus(user.login,lastFeedbackWeek);
+      fbHtml='<div class="section" style="border-left:4px solid #7c3aed"><h3 style="color:#7c3aed">Feedback Completion - Your Team (Week '+lastFeedbackWeek+')</h3><table><thead><tr><th>Associate</th><th style="text-align:center">Audited</th><th style="text-align:center">Defects</th><th style="text-align:center">Feedback Status</th></tr></thead><tbody>';
+      for(var assocLogin of myAssocs){
+        var assocRecs=fRecords.filter(function(r){return r.associateLogin===assocLogin&&r.supervisorLogin===user.login;});
+        var assocAudited=assocRecs.length;
+        var assocDefects=assocRecs.filter(function(r){return r.defectFlag;}).length;
+        var assocFbStatus=fStatus&&fStatus[assocLogin]?fStatus[assocLogin]:'Pending';
+        var statusColor=assocFbStatus==='Shared'?'#059669':'#d97706';
+        var statusBadge=assocFbStatus==='Shared'?'<span style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:4px;font-size:11px">Shared</span>':'<span style="background:#fffbeb;color:#d97706;padding:2px 8px;border-radius:4px;font-size:11px">Pending</span>';
+        fbHtml+='<tr><td>'+assocLogin+'</td><td style="text-align:center">'+assocAudited+'</td><td style="text-align:center">'+assocDefects+'</td><td style="text-align:center">'+statusBadge+'</td></tr>';
+      }
+      fbHtml+='</tbody></table><p class="text-muted" style="margin-top:8px">Use the Feedback/Appreciate buttons in Raw Data to mark feedback as shared.</p></div>';
+    }
+content+=fbHtml;
     }
   }
 }
@@ -757,8 +774,6 @@ function renderNav(){
   const rawActive=state.currentView==='rawdata'?'active':'';
   const leaderActive=state.currentView==='leadership'?'active':'';
   const glossaryActive=state.currentView==='glossary'?'active':'';
-  
-  const wowActive=state.currentView==='wowreport'?'active':'';
   var navLinks='<button class="nav-link '+glossaryActive+'" onclick="state.currentView=\'glossary\';render()">Glossary</button>';
   navLinks+='<button class="nav-link '+dashActive+'" onclick="state.currentView=\'dashboard\';render()">Dashboard</button>';
   navLinks+='<button class="nav-link '+rawActive+'" onclick="state.currentView=\'rawdata\';render()">Raw Data</button>';
