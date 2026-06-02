@@ -593,7 +593,7 @@ function render(){
   if(state.currentView==='leadership'){const report=computeLeadershipReport(AUDIT_DATA,state.leadershipRegion||'',state.leadershipWeek||'last4');app.innerHTML=renderNav()+'<div class="main">'+renderLeadershipReport(report)+'</div>';bindLeadership();return;}
   if(state.currentView==='glossary'){app.innerHTML=renderNav()+'<div class="main">'+renderGlossary()+'</div>';bindDashboard();return;}
   if(state.currentView==='escalations'){app.innerHTML=renderNav()+'<div class="main">'+renderEscalations()+'</div>';bindEscalations();return;}
-  if(state.currentView==='wowreport'){app.innerHTML=renderNav()+'<div class="main"><div class="section"><h3>Week-over-Week Report</h3><p class="text-muted">WoW report is generated via email. Use the Dashboard view for quality trends.</p></div></div>';return;}
+  
   app.innerHTML=renderDashboard();bindDashboard();
 }
 
@@ -699,23 +699,23 @@ if(user.role!=='associate'){
       }
       fbHtml+='</tbody></table><p class="text-muted" style="margin-top:8px">Tracking starts from Week 21. Completion updates when managers use the Feedback/Appreciate email buttons.</p></div>';
       
-    // Manager view: show associate-wise feedback for their team
     if(user.role==='manager'){
       var myAssocs=new Set(fRecords.filter(function(r){return r.supervisorLogin===user.login;}).map(function(r){return r.associateLogin;}));
       var fStatus=getFeedbackStatus(user.login,lastFeedbackWeek);
       fbHtml='<div class="section" style="border-left:4px solid #7c3aed"><h3 style="color:#7c3aed">Feedback Completion - Your Team (Week '+lastFeedbackWeek+')</h3><table><thead><tr><th>Associate</th><th style="text-align:center">Audited</th><th style="text-align:center">Defects</th><th style="text-align:center">Feedback Status</th></tr></thead><tbody>';
-      for(var assocLogin of myAssocs){
+      var assocArr=Array.from(myAssocs);
+      for(var ai=0;ai<assocArr.length;ai++){
+        var assocLogin=assocArr[ai];
         var assocRecs=fRecords.filter(function(r){return r.associateLogin===assocLogin&&r.supervisorLogin===user.login;});
         var assocAudited=assocRecs.length;
         var assocDefects=assocRecs.filter(function(r){return r.defectFlag;}).length;
         var assocFbStatus=fStatus&&fStatus[assocLogin]?fStatus[assocLogin]:'Pending';
-        var statusColor=assocFbStatus==='Shared'?'#059669':'#d97706';
         var statusBadge=assocFbStatus==='Shared'?'<span style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:4px;font-size:11px">Shared</span>':'<span style="background:#fffbeb;color:#d97706;padding:2px 8px;border-radius:4px;font-size:11px">Pending</span>';
         fbHtml+='<tr><td>'+assocLogin+'</td><td style="text-align:center">'+assocAudited+'</td><td style="text-align:center">'+assocDefects+'</td><td style="text-align:center">'+statusBadge+'</td></tr>';
       }
-      fbHtml+='</tbody></table><p class="text-muted" style="margin-top:8px">Use the Feedback/Appreciate buttons in Raw Data to mark feedback as shared.</p></div>';
+      fbHtml+='</tbody></table><p class="text-muted" style="margin-top:8px">Use Feedback/Appreciate buttons in Raw Data to mark as shared.</p></div>';
     }
-content+=fbHtml;
+    content+=fbHtml;
     }
   }
 }
@@ -778,8 +778,7 @@ function renderNav(){
   navLinks+='<button class="nav-link '+dashActive+'" onclick="state.currentView=\'dashboard\';render()">Dashboard</button>';
   navLinks+='<button class="nav-link '+rawActive+'" onclick="state.currentView=\'rawdata\';render()">Raw Data</button>';
   
-  navLinks+='<button class="nav-link '+wowActive+'" onclick="state.currentView=\'wowreport\';render()">WoW Report</button>';
-  if(user.role==='admin'){navLinks+='<button class="nav-link '+leaderActive+'" onclick="state.currentView=\'leadership\';render()">Leadership Report</button>';}
+    if(user.role==='admin'){navLinks+='<button class="nav-link '+leaderActive+'" onclick="state.currentView=\'leadership\';render()">Leadership Report</button>';}
   return`<nav class="nav">
     <div style="display:flex;align-items:center;gap:20px">
       <span class="nav-title">RSOB - Quality Performance Dashboard - NA & EU</span><span style="font-size:11px;color:#93c5fd;margin-left:12px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px">Last Updated: 2 June 2026 | Week 21</span>
