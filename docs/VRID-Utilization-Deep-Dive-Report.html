@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>VRID Utilization Deep Dive</title>
+<style>
+body{font-family:Amazon Ember,Segoe UI,Arial,sans-serif;max-width:900px;margin:40px auto;padding:20px;color:#1a1a2e;line-height:1.7}
+h1{font-size:24px;border-bottom:3px solid #232946;padding-bottom:8px}
+h2{font-size:18px;color:#232946;margin-top:32px;border-bottom:2px solid #4361ee;padding-bottom:6px}
+h3{font-size:15px;color:#4361ee;margin-top:20px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px}
+th{background:#232946;color:#fff;padding:8px 10px;text-align:left}
+td{padding:7px 10px;border-bottom:1px solid #e9ecef}
+tr:nth-child(even){background:#f8f9fa}
+.kpi-box{display:inline-block;background:#232946;color:#fff;padding:12px 20px;border-radius:8px;margin:8px 8px 8px 0;text-align:center;min-width:140px}
+.kpi-box.red{background:#dc3545}
+.kpi-box.green{background:#2d6a4f}
+.kpi-box .val{font-size:22px;font-weight:700}
+.kpi-box .lbl{font-size:11px;opacity:0.9}
+.callout{background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;margin:16px 0;border-radius:4px}
+.callout-red{background:#f8d7da;border-left:4px solid #dc3545;padding:12px 16px;margin:16px 0;border-radius:4px}
+.callout-blue{background:#d1ecf1;border-left:4px solid #0dcaf0;padding:12px 16px;margin:16px 0;border-radius:4px}
+.footer{color:#999;font-size:11px;margin-top:40px;border-top:1px solid #ddd;padding-top:12px}
+</style></head><body>
+
+<h1>VRID Utilization Deep Dive &mdash; Site-Level Analysis</h1>
+<p style="color:#666">Data Period: Weeks 17-19, 2026 | Platforms in Scope: <b>Flintstones (FMC)</b> &amp; <b>CASA_UI</b></p>
+
+<h2>1. Scope &amp; Methodology</h2>
+<p>This analysis considers <b>only loads created through Flintstones (FMC) and CASA_UI platforms</b>. Only active loads (is_active = 1) with valid fill_cube_num and target_cube_den values are included.</p>
+<p><b>Utilization Formula:</b> fill_cube_num / target_cube_den &times; 100</p>
+<p><b>Target:</b> 60% utilization</p>
+<p><b>Focus:</b> Sites below 60% utilization with 20+ active loads (high-volume, actionable sites)</p>
+
+<h2>2. Executive Summary</h2>
+<div>
+<div class="kpi-box red"><div class="val">51.4%</div><div class="lbl">Overall Utilization</div></div>
+<div class="kpi-box"><div class="val">25,492</div><div class="lbl">Active Loads</div></div>
+<div class="kpi-box green"><div class="val">60.5%</div><div class="lbl">FMC (17,882 loads)</div></div>
+<div class="kpi-box red"><div class="val">29.8%</div><div class="lbl">CASA (7,610 loads)</div></div>
+<div class="kpi-box red"><div class="val">233</div><div class="lbl">Sites Below 60%</div></div>
+</div>
+
+<div class="callout-red"><b>Key Finding:</b> CASA-created loads are the primary drag on utilization, running at 29.8% vs FMC at 60.5%. Across every adhoc bucket, CASA underperforms FMC by 20-33 percentage points. Loads are being created before sufficient volume accumulates at origin sites.</div>
+
+<h2>3. Weekly Utilization Trend</h2>
+<table>
+<tr><th>Week</th><th>Utilization %</th><th>Active Loads</th><th>Trend</th></tr>
+<tr><td>Week 17</td><td>51.7%</td><td>11,037</td><td>Baseline</td></tr>
+<tr><td>Week 18</td><td>51.1%</td><td>12,885</td><td>&#9660; -0.6pp</td></tr>
+<tr><td>Week 19</td><td>51.1%</td><td>1,570</td><td>Flat</td></tr>
+</table>
+<div class="callout"><b>Observation:</b> Utilization is flat at ~51% with no organic improvement. Without structured intervention, this will not self-correct.</div>
+
+<h2>4. Utilization by Adhoc Bucket</h2>
+<table>
+<tr><th>Adhoc Bucket</th><th>Utilization %</th><th>Load Count</th><th>Impact Level</th></tr>
+<tr><td>FC Underutilized</td><td style="color:#dc3545;font-weight:bold">18.8%</td><td>2,421</td><td>High</td></tr>
+<tr><td>Scheduling/Planning (Last CPT VA > TC)</td><td style="color:#dc3545;font-weight:bold">29.5%</td><td>1,187</td><td>High</td></tr>
+<tr><td>GTWY Underutilized</td><td style="color:#dc3545;font-weight:bold">31.4%</td><td>178</td><td>High</td></tr>
+<tr><td>Rolled Freight</td><td style="color:#dc3545;font-weight:bold">34.2%</td><td>156</td><td>High</td></tr>
+<tr><td>Not Enough Volume By TRT</td><td style="color:#e76f51;font-weight:bold">35.6%</td><td>1,342</td><td>Medium</td></tr>
+<tr><td>Future Volume</td><td style="color:#e76f51;font-weight:bold">39.5%</td><td>126</td><td>Medium</td></tr>
+<tr><td>New Lane CPT</td><td style="color:#e76f51;font-weight:bold">39.9%</td><td>241</td><td>Medium</td></tr>
+<tr><td>Unknown</td><td style="color:#e76f51;font-weight:normal">42.2%</td><td>70</td><td>Medium</td></tr>
+<tr><td>Schedule UB</td><td style="color:#e76f51;font-weight:normal">44.3%</td><td>622</td><td>Medium</td></tr>
+<tr><td>SC Underutilized</td><td style="color:#e76f51;font-weight:normal">46.3%</td><td>519</td><td>Medium</td></tr>
+<tr><td>Inbound Volume Not Available</td><td style="color:#e76f51;font-weight:normal">46.5%</td><td>1,508</td><td>Medium</td></tr>
+<tr><td>Weather/LSE</td><td style="color:#e76f51;font-weight:normal">49.5%</td><td>270</td><td>Medium</td></tr>
+<tr><td>Yard Dwell</td><td style="color:#e76f51;font-weight:normal">49.5%</td><td>479</td><td>Medium</td></tr>
+<tr><td>Forecast UB</td><td style="color:#000;font-weight:normal">50.3%</td><td>1,683</td><td>Low</td></tr>
+<tr><td>Other Cancel</td><td style="color:#000;font-weight:normal">56.4%</td><td>1,245</td><td>Low</td></tr>
+<tr><td>Delayed Loading</td><td style="color:#000;font-weight:normal">58.6%</td><td>213</td><td>Low</td></tr>
+<tr><td>Disruption Management</td><td style="color:#000;font-weight:normal">59.7%</td><td>3,123</td><td>Low</td></tr>
+<tr><td>Not Adhoc</td><td style="color:#000;font-weight:normal">62.9%</td><td>10,109</td><td>Low</td></tr>
+</table>
+
+<h2>5. Site-Level Utilization &mdash; Priority Sites</h2>
+<p>All sites below 60% utilization with 20+ active loads, sorted by volume.</p>
+
+<h3>5.1 Tier 1 &mdash; Severely Underutilized (Below 40%) &mdash; 89 sites</h3>
+<table>
+<tr><th>Site</th><th>Util%</th><th>Loads</th><th>Wk17</th><th>Wk18</th><th>Wk19</th><th>CASA%</th><th>FMC%</th><th>Top Buckets</th></tr>
+<tr><td><b>SYR1</b></td><td style="color:#e76f51;font-weight:bold">38.7%</td><td>264</td><td>36.4%</td><td>40.5%</td><td>42.3%</td><td style="color:#dc3545">20.3%</td><td>53.2%</td><td style="font-size:11px">FC Underutilized (18%), Not Adhoc (58%)</td></tr>
+<tr><td><b>BTR1</b></td><td style="color:#e76f51;font-weight:bold">36.5%</td><td>222</td><td>27.9%</td><td>43.0%</td><td>46.9%</td><td style="color:#dc3545">13.4%</td><td>46.8%</td><td style="font-size:11px">FC Underutilized (15%), Disruption Management (38%)</td></tr>
+<tr><td><b>SCK6</b></td><td style="color:#e76f51;font-weight:bold">32.1%</td><td>213</td><td>35.1%</td><td>30.6%</td><td>23.5%</td><td style="color:#dc3545">16.8%</td><td>50.3%</td><td style="font-size:11px">FC Underutilized (14%), Not Adhoc (68%)</td></tr>
+<tr><td><b>LGB3</b></td><td style="color:#dc3545;font-weight:bold">29.0%</td><td>202</td><td>25.9%</td><td>31.5%</td><td>37.7%</td><td style="color:#dc3545">16.5%</td><td>37.2%</td><td style="font-size:11px">FC Underutilized (11%), Scheduling/Planning (Last CPT VA > TC) (22%)</td></tr>
+<tr><td><b>ORF3</b></td><td style="color:#e76f51;font-weight:bold">39.9%</td><td>198</td><td>41.8%</td><td>38.9%</td><td>39.1%</td><td style="color:#dc3545">14.6%</td><td>51.1%</td><td style="font-size:11px">FC Underutilized (20%), Not Adhoc (70%)</td></tr>
+<tr><td><b>BDL3</b></td><td style="color:#e76f51;font-weight:bold">32.8%</td><td>183</td><td>38.4%</td><td>29.6%</td><td>27.3%</td><td style="color:#dc3545">10.8%</td><td>36.2%</td><td style="font-size:11px">Not Adhoc (37%), FC Underutilized (14%)</td></tr>
+<tr><td><b>DCA1</b></td><td style="color:#e76f51;font-weight:bold">36.7%</td><td>179</td><td>40.8%</td><td>33.1%</td><td>26.5%</td><td style="color:#dc3545">17.5%</td><td>44.3%</td><td style="font-size:11px">Disruption Management (38%), Not Adhoc (66%)</td></tr>
+<tr><td><b>LGA9</b></td><td style="color:#dc3545;font-weight:bold">26.4%</td><td>175</td><td>23.6%</td><td>29.1%</td><td>16.4%</td><td style="color:#dc3545">20.6%</td><td>28.4%</td><td style="font-size:11px">Not Adhoc (25%), Disruption Management (35%)</td></tr>
+<tr><td><b>MTN1</b></td><td style="color:#e76f51;font-weight:bold">34.5%</td><td>175</td><td>24.0%</td><td>39.7%</td><td>41.7%</td><td style="color:#dc3545">18.8%</td><td>44.0%</td><td style="font-size:11px">FC Underutilized (17%), Disruption Management (41%)</td></tr>
+<tr><td><b>BDL4</b></td><td style="color:#e76f51;font-weight:bold">37.2%</td><td>168</td><td>39.7%</td><td>36.8%</td><td>28.2%</td><td style="color:#dc3545">18.5%</td><td>57.0%</td><td style="font-size:11px">FC Underutilized (21%), Not Adhoc (67%)</td></tr>
+<tr><td><b>AUS2</b></td><td style="color:#e76f51;font-weight:bold">32.9%</td><td>147</td><td>35.8%</td><td>29.9%</td><td>35.7%</td><td style="color:#dc3545">15.0%</td><td>59.9%</td><td style="font-size:11px">FC Underutilized (14%), Not Adhoc (69%)</td></tr>
+<tr><td><b>SHV1</b></td><td style="color:#e76f51;font-weight:bold">34.3%</td><td>137</td><td>33.5%</td><td>34.5%</td><td>36.6%</td><td style="color:#dc3545">14.6%</td><td>44.7%</td><td style="font-size:11px">FC Underutilized (14%), Not Adhoc (40%)</td></tr>
+<tr><td><b>IGQ1</b></td><td style="color:#dc3545;font-weight:bold">28.7%</td><td>136</td><td>27.8%</td><td>29.6%</td><td>28.1%</td><td style="color:#dc3545">18.5%</td><td>41.9%</td><td style="font-size:11px">FC Underutilized (14%), Not Adhoc (53%)</td></tr>
+<tr><td><b>SBD6</b></td><td style="color:#e76f51;font-weight:bold">30.8%</td><td>126</td><td>23.3%</td><td>35.0%</td><td>32.5%</td><td style="color:#dc3545">22.5%</td><td>38.8%</td><td style="font-size:11px">FC Underutilized (12%), Not Adhoc (45%)</td></tr>
+<tr><td><b>BDL2</b></td><td style="color:#dc3545;font-weight:bold">29.1%</td><td>126</td><td>29.5%</td><td>30.1%</td><td>17.1%</td><td style="color:#dc3545">15.2%</td><td>35.2%</td><td style="font-size:11px">Not Adhoc (35%), Not Enough Volume By TRT (24%)</td></tr>
+<tr><td><b>BFI4</b></td><td style="color:#dc3545;font-weight:bold">27.4%</td><td>124</td><td>21.9%</td><td>29.7%</td><td>24.8%</td><td style="color:#dc3545">13.5%</td><td>46.1%</td><td style="font-size:11px">FC Underutilized (16%), Not Adhoc (38%)</td></tr>
+<tr><td><b>BFL1</b></td><td style="color:#e76f51;font-weight:bold">34.5%</td><td>119</td><td>29.4%</td><td>37.0%</td><td>55.3%</td><td style="color:#dc3545">23.2%</td><td>46.3%</td><td style="font-size:11px">Not Adhoc (62%), FC Underutilized (11%)</td></tr>
+<tr><td><b>DET6</b></td><td style="color:#e76f51;font-weight:bold">36.3%</td><td>119</td><td>33.1%</td><td>37.8%</td><td>43.8%</td><td style="color:#dc3545">15.0%</td><td>47.6%</td><td style="font-size:11px">Not Adhoc (67%), FC Underutilized (18%)</td></tr>
+<tr><td><b>BWI2</b></td><td style="color:#e76f51;font-weight:bold">37.3%</td><td>115</td><td>24.7%</td><td>44.5%</td><td>42.7%</td><td style="color:#dc3545">10.8%</td><td>49.6%</td><td style="font-size:11px">Not Adhoc (49%), FC Underutilized (14%)</td></tr>
+<tr><td><b>EWR9</b></td><td style="color:#dc3545;font-weight:bold">29.4%</td><td>110</td><td>27.2%</td><td>28.5%</td><td>51.0%</td><td style="color:#dc3545">17.4%</td><td>37.3%</td><td style="font-size:11px">Not Adhoc (33%), Forecast UB (25%)</td></tr>
+<tr><td><b>OAK4</b></td><td style="color:#e76f51;font-weight:bold">33.5%</td><td>107</td><td>42.8%</td><td>26.5%</td><td>7.8%</td><td style="color:#dc3545">7.8%</td><td>42.0%</td><td style="font-size:11px">Not Adhoc (40%), FC Underutilized (10%)</td></tr>
+<tr><td><b>PAE2</b></td><td style="color:#e76f51;font-weight:bold">31.8%</td><td>106</td><td>36.1%</td><td>29.9%</td><td>34.4%</td><td style="color:#dc3545">26.6%</td><td>33.7%</td><td style="font-size:11px">Not Adhoc (36%), Scheduling/Planning (Last CPT VA > TC) (17%)</td></tr>
+<tr><td><b>PSP1</b></td><td style="color:#e76f51;font-weight:bold">38.5%</td><td>104</td><td>47.9%</td><td>31.9%</td><td>30.3%</td><td style="color:#dc3545">33.2%</td><td>44.0%</td><td style="font-size:11px">Not Adhoc (57%), FC Underutilized (13%)</td></tr>
+<tr><td><b>LGB7</b></td><td style="color:#dc3545;font-weight:bold">24.1%</td><td>102</td><td>24.9%</td><td>23.7%</td><td>20.7%</td><td style="color:#dc3545">10.3%</td><td>43.3%</td><td style="font-size:11px">Disruption Management (41%), FC Underutilized (11%)</td></tr>
+<tr><td><b>SAT3</b></td><td style="color:#e76f51;font-weight:bold">39.2%</td><td>96</td><td>45.6%</td><td>29.9%</td><td>14.4%</td><td style="color:#dc3545">22.7%</td><td>49.5%</td><td style="font-size:11px">Not Adhoc (63%), FC Underutilized (16%)</td></tr>
+</table>
+
+<h3>5.2 Tier 2 &mdash; Moderate Gap (40-60%) &mdash; 144 sites</h3>
+<table>
+<tr><th>Site</th><th>Util%</th><th>Loads</th><th>Wk17</th><th>Wk18</th><th>Wk19</th><th>CASA%</th><th>FMC%</th><th>Top Buckets</th></tr>
+<tr><td><b>LDJ5</b></td><td style="color:#6c757d;font-weight:bold">54.7%</td><td>299</td><td>55.0%</td><td>54.4%</td><td>53.6%</td><td style="color:#dc3545">43.3%</td><td>61.2%</td><td style="font-size:11px">Not Adhoc (65%), Inbound Volume Not Available (38%)</td></tr>
+<tr><td><b>TPA4</b></td><td style="color:#f4a261;font-weight:bold">45.9%</td><td>244</td><td>46.9%</td><td>45.1%</td><td>45.4%</td><td style="color:#dc3545">21.0%</td><td>49.3%</td><td style="font-size:11px">Not Adhoc (50%), FC Underutilized (15%)</td></tr>
+<tr><td><b>SAN3</b></td><td style="color:#f4a261;font-weight:bold">40.2%</td><td>222</td><td>39.4%</td><td>41.1%</td><td>39.4%</td><td style="color:#dc3545">19.0%</td><td>47.9%</td><td style="font-size:11px">Not Adhoc (51%), Disruption Management (49%)</td></tr>
+<tr><td><b>MQY1</b></td><td style="color:#f4a261;font-weight:bold">41.2%</td><td>218</td><td>35.5%</td><td>44.3%</td><td>58.9%</td><td style="color:#dc3545">18.6%</td><td>51.0%</td><td style="font-size:11px">Not Adhoc (50%), Not Enough Volume By TRT (31%)</td></tr>
+<tr><td><b>CLT4</b></td><td style="color:#f4a261;font-weight:bold">46.8%</td><td>218</td><td>45.5%</td><td>48.2%</td><td>40.8%</td><td style="color:#dc3545">22.4%</td><td>51.3%</td><td style="font-size:11px">Not Adhoc (49%), FC Underutilized (23%)</td></tr>
+<tr><td><b>MTN6</b></td><td style="color:#6c757d;font-weight:bold">54.2%</td><td>200</td><td>52.1%</td><td>56.3%</td><td>53.5%</td><td style="color:#dc3545">41.6%</td><td>69.7%</td><td style="font-size:11px">Inbound Volume Not Available (45%), Forecast UB (60%)</td></tr>
+<tr><td><b>DAB2</b></td><td style="color:#f4a261;font-weight:bold">41.5%</td><td>180</td><td>40.2%</td><td>41.8%</td><td>48.8%</td><td style="color:#dc3545">22.4%</td><td>69.0%</td><td style="font-size:11px">FC Underutilized (25%), Not Adhoc (65%)</td></tr>
+<tr><td><b>BNA7</b></td><td style="color:#f4a261;font-weight:bold">49.3%</td><td>171</td><td>55.8%</td><td>45.8%</td><td>41.2%</td><td style="color:#dc3545">44.0%</td><td>66.6%</td><td style="font-size:11px">Inbound Volume Not Available (32%), Yard Dwell (54%)</td></tr>
+<tr><td><b>MCO1</b></td><td style="color:#6c757d;font-weight:bold">58.3%</td><td>167</td><td>55.3%</td><td>61.5%</td><td>54.8%</td><td style="color:#dc3545">17.5%</td><td>69.8%</td><td style="font-size:11px">Not Adhoc (79%), Disruption Management (62%)</td></tr>
+<tr><td><b>MGE5</b></td><td style="color:#6c757d;font-weight:bold">51.8%</td><td>167</td><td>53.4%</td><td>50.8%</td><td>47.9%</td><td style="color:#dc3545">41.1%</td><td>58.9%</td><td style="font-size:11px">Not Adhoc (60%), Inbound Volume Not Available (46%)</td></tr>
+<tr><td><b>RDU1</b></td><td style="color:#f4a261;font-weight:bold">42.3%</td><td>162</td><td>36.7%</td><td>46.3%</td><td>52.8%</td><td style="color:#dc3545">16.1%</td><td>51.2%</td><td style="font-size:11px">Not Adhoc (66%), FC Underutilized (8%)</td></tr>
+<tr><td><b>JAX2</b></td><td style="color:#f4a261;font-weight:bold">49.5%</td><td>153</td><td>52.8%</td><td>48.7%</td><td>30.8%</td><td style="color:#dc3545">19.5%</td><td>66.3%</td><td style="font-size:11px">Not Adhoc (66%), Scheduling/Planning (Last CPT VA > TC) (21%)</td></tr>
+<tr><td><b>ZEWR</b></td><td style="color:#6c757d;font-weight:bold">57.7%</td><td>153</td><td>58.7%</td><td>58.6%</td><td>48.0%</td><td style="color:#dc3545">35.6%</td><td>80.3%</td><td style="font-size:11px">Not Adhoc (72%), Inbound Volume Not Available (37%)</td></tr>
+<tr><td><b>BOS3</b></td><td style="color:#6c757d;font-weight:bold">56.2%</td><td>147</td><td>42.3%</td><td>61.9%</td><td>64.5%</td><td style="color:#dc3545">23.7%</td><td>71.5%</td><td style="font-size:11px">Not Adhoc (87%), FC Underutilized (20%)</td></tr>
+<tr><td><b>SMF1</b></td><td style="color:#f4a261;font-weight:bold">47.0%</td><td>146</td><td>49.8%</td><td>43.1%</td><td>61.7%</td><td style="color:#dc3545">14.9%</td><td>51.7%</td><td style="font-size:11px">Not Adhoc (60%), Disruption Management (45%)</td></tr>
+<tr><td><b>MQJ5</b></td><td style="color:#6c757d;font-weight:bold">58.3%</td><td>144</td><td>59.1%</td><td>58.6%</td><td>49.1%</td><td style="color:#dc3545">53.6%</td><td>68.8%</td><td style="font-size:11px">Other Cancel (57%), Disruption Management (70%)</td></tr>
+<tr><td><b>JFK8</b></td><td style="color:#f4a261;font-weight:bold">44.3%</td><td>143</td><td>50.9%</td><td>37.0%</td><td>29.0%</td><td style="color:#dc3545">17.6%</td><td>65.5%</td><td style="font-size:11px">Not Adhoc (88%), FC Underutilized (15%)</td></tr>
+<tr><td><b>EWR4</b></td><td style="color:#f4a261;font-weight:bold">48.7%</td><td>139</td><td>44.2%</td><td>49.9%</td><td>65.4%</td><td style="color:#dc3545">21.0%</td><td>58.3%</td><td style="font-size:11px">Not Adhoc (65%), FC Underutilized (30%)</td></tr>
+<tr><td><b>GEG5</b></td><td style="color:#6c757d;font-weight:bold">59.7%</td><td>131</td><td>57.6%</td><td>62.3%</td><td>26.7%</td><td style="color:#dc3545">21.6%</td><td>66.2%</td><td style="font-size:11px">Not Adhoc (66%), Inbound Volume Not Available (32%)</td></tr>
+<tr><td><b>MIA1</b></td><td style="color:#6c757d;font-weight:bold">57.3%</td><td>130</td><td>59.7%</td><td>56.5%</td><td>28.7%</td><td style="color:#dc3545">21.1%</td><td>64.3%</td><td style="font-size:11px">Not Adhoc (77%), FC Underutilized (20%)</td></tr>
+<tr><td><b>CMH4</b></td><td style="color:#6c757d;font-weight:bold">52.3%</td><td>129</td><td>50.0%</td><td>56.2%</td><td>49.9%</td><td style="color:#dc3545">23.7%</td><td>58.4%</td><td style="font-size:11px">Not Adhoc (71%), Disruption Management (48%)</td></tr>
+<tr><td><b>MGEY</b></td><td style="color:#6c757d;font-weight:bold">58.5%</td><td>129</td><td>53.6%</td><td>63.5%</td><td>59.5%</td><td style="color:#dc3545">46.4%</td><td>85.4%</td><td style="font-size:11px">Not Adhoc (77%), SC Underutilized (40%)</td></tr>
+<tr><td><b>JAN1</b></td><td style="color:#f4a261;font-weight:bold">43.3%</td><td>118</td><td>45.1%</td><td>44.0%</td><td>34.4%</td><td style="color:#dc3545">16.8%</td><td>61.4%</td><td style="font-size:11px">Not Adhoc (73%), FC Underutilized (13%)</td></tr>
+<tr><td><b>STL8</b></td><td style="color:#6c757d;font-weight:bold">50.8%</td><td>117</td><td>49.6%</td><td>52.0%</td><td>47.1%</td><td style="color:#dc3545">26.0%</td><td>54.4%</td><td style="font-size:11px">Not Adhoc (62%), FC Underutilized (25%)</td></tr>
+<tr><td><b>MCO5</b></td><td style="color:#6c757d;font-weight:bold">58.2%</td><td>117</td><td>57.6%</td><td>57.8%</td><td>71.3%</td><td style="color:#dc3545">40.1%</td><td>66.4%</td><td style="font-size:11px">Not Adhoc (58%), Inbound Volume Not Available (53%)</td></tr>
+</table>
+
+<h2>6. Root Cause Classification Framework</h2>
+<table>
+<tr><th>Root Cause</th><th>Data Indicator</th><th>Est. Impact</th><th>Recommended Action</th></tr>
+<tr><td><b>Premature Load Creation (CASA)</b></td><td>CASA + FC Underutilized + fill &lt; 20%</td><td>~35% of gap</td><td>Min fill threshold before dispatch</td></tr>
+<tr><td><b>Insufficient Volume at Origin</b></td><td>Not Enough Volume By TRT + low pkg count</td><td>~20% of gap</td><td>Delay creation until volume exists</td></tr>
+<tr><td><b>Scheduling/Timing Mismatch</b></td><td>Scheduling/Planning bucket + negative hourstocpt</td><td>~15% of gap</td><td>Shift creation window / adjust CPT</td></tr>
+<tr><td><b>Target Overcalibration</b></td><td>High target_cube vs actual available freight</td><td>~15% of gap</td><td>Recalibrate target cube per lane</td></tr>
+<tr><td><b>Disruption Spillover</b></td><td>DM bucket + low fill (expected during disruptions)</td><td>~10% of gap</td><td>Track separately &mdash; not fully controllable</td></tr>
+<tr><td><b>Manual Override Issues</b></td><td>CASA + specific creator patterns + repeated low fill</td><td>~5% of gap</td><td>Training / creation guardrails</td></tr>
+</table>
+
+<h2>7. Execution Framework &mdash; Ongoing Mechanism</h2>
+
+<h3>Step 1: Weekly Site Identification (5 min)</h3>
+<ul>
+<li>Pull site utilization for all sites with 10+ active loads</li>
+<li>Flag sites below 60% utilization</li>
+<li>Identify sites trending downward (Wk-over-Wk decline &gt; 5pp)</li>
+</ul>
+
+<h3>Step 2: Site-Level Deep Dive (15 min per site)</h3>
+<ul>
+<li>Analyze platform split (CASA vs FMC) for each flagged site</li>
+<li>Identify dominant adhoc bucket driving low utilization</li>
+<li>Determine if issue is CASA-driven (premature creation) or FMC-driven (system logic)</li>
+<li>Classify root cause using framework above</li>
+</ul>
+
+<h3>Step 3: Site Outreach &amp; Follow-Up</h3>
+<ul>
+<li>Share site-specific findings with POC (platform split, bucket breakdown, trend)</li>
+<li>Request observations: What is causing low fill at their site?</li>
+<li>Set up bi-weekly 15-min sync with top priority sites</li>
+<li>POCs to suggest process/timing changes that could improve fill rates</li>
+</ul>
+
+<h3>Step 4: Track &amp; Report</h3>
+<table>
+<tr><th>Cadence</th><th>Action</th><th>Owner</th><th>Time</th></tr>
+<tr><td>Weekly</td><td>Site POCs submit observations + blockers</td><td>Site POC</td><td>10 min</td></tr>
+<tr><td>Bi-weekly</td><td>Consolidate findings, update tracker, flag trends</td><td>Program Owner</td><td>30 min</td></tr>
+<tr><td>Monthly</td><td>Leadership update with trend data</td><td>Program Owner</td><td>20 min</td></tr>
+<tr><td>Quarterly</td><td>Full refresh &mdash; re-score all sites, recalibrate targets</td><td>Program Owner + POCs</td><td>1 hr</td></tr>
+</table>
+
+<h2>8. Targets &amp; Milestones</h2>
+<table>
+<tr><th>Metric</th><th>Current (Wk17-19)</th><th>4-Week Target</th><th>12-Week Target</th></tr>
+<tr><td>Overall Utilization</td><td style="color:#dc3545;font-weight:bold">51.4%</td><td>54%</td><td>60%</td></tr>
+<tr><td>CASA Utilization</td><td style="color:#dc3545;font-weight:bold">29.8%</td><td>35%</td><td>45%</td></tr>
+<tr><td>FMC Utilization</td><td style="color:#2d6a4f;font-weight:bold">60.5%</td><td>62%</td><td>65%</td></tr>
+<tr><td>Sites Below 60%</td><td>233</td><td>198</td><td>151</td></tr>
+</table>
+
+<h2>9. Timeline</h2>
+<table>
+<tr><th>Week</th><th>Action</th><th>Deliverable</th></tr>
+<tr><td>Week 1</td><td>Baseline complete, sites prioritized, framework documented</td><td>This document</td></tr>
+<tr><td>Week 2</td><td>Outreach to Tier 1 sites (top 10 by severity)</td><td>POC responses collected</td></tr>
+<tr><td>Week 3</td><td>Site-level deep dive for top 5 sites</td><td>Root cause classification per site</td></tr>
+<tr><td>Week 4</td><td>First leadership update with trend data</td><td>Monthly report</td></tr>
+<tr><td>Week 5-8</td><td>Monitor, iterate, expand to Tier 2 sites</td><td>Trend improvement evidence</td></tr>
+<tr><td>Week 9-12</td><td>Mechanism stabilized, playbook documented</td><td>Reusable framework</td></tr>
+</table>
+
+<h2>10. Key Recommendations</h2>
+<div class="callout-blue">
+<p><b>1. Address CASA Load Creation Logic (Primary Lever)</b><br>
+CASA loads run at 29.8% &mdash; half the rate of FMC. Implementing a minimum fill threshold before CASA allows load dispatch could move overall utilization from 51.4% toward 57-60%.</p>
+<p><b>2. Prioritize "FC Underutilized" Bucket</b><br>
+This bucket runs at 18.8% utilization across 2,421 loads. Loads are being created with almost no freight available &mdash; single biggest opportunity.</p>
+<p><b>3. Site-Specific Engagement for Tier 1 Sites</b><br>
+Top 10 underutilized high-volume sites need direct POC engagement to understand local factors.</p>
+<p><b>4. Build Repeatable Mechanism</b><br>
+Weekly/bi-weekly/monthly cadence ensures sustained improvement and provides leadership with ongoing visibility.</p>
+</div>
+
+<div class="footer">
+<p>Document prepared: May 2026 | Data: Weeks 17-19, 2026</p>
+<p>Platforms in scope: Flintstones (FMC) &amp; CASA_UI only | Active loads only (is_active = 1)</p>
+</div>
+
+</body></html>

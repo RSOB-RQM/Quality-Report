@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+
+# Dist - track index.html for GitHub Pages, exclude sensitive files
+dist/CREDENTIALS.txt
+dist/temp_check.js
+dist/*.bat
+dist/*.zip
+
+# Environment & secrets
+.env
+.env.local
+.env.production
+.env*.local
+
+# Credentials & sensitive data (IMPORTANT - never commit these)
+data/CREDENTIALS.txt
+data/password-hashes.json
+data/user-passwords.json
+dist/CREDENTIALS.txt
+github_pat_*
+Github token.xlsx
+
+# Downloads folder (personal files, not project code)
+Downloads/
+
+# Node binary (large, not needed in repo)
+node-v24.15.0-win-x64/
+
+# Excel/Office temp files
+~$*.xlsx
+~$*.docx
+
+# Large data spreadsheets (optional - remove lines if you want these tracked)
+*.xlsx
+*.xlsm
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor
+.vscode/
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# Batch scripts with credentials/tokens
+PUSH-TO-GITHUB.bat
+
+# Package lock (keep this if you want reproducible installs - remove this line)
+# package-lock.json

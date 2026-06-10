@@ -1,0 +1,199 @@
+Subject: RSOB Quality Performance — WoW Trend Report (Week 1–20, 2026)
+
+Hi Team,
+
+Please find below the complete Week-over-Week Quality Trend for RSOB (NA & EU) from Week 1 to Week 20, 2026.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 EXECUTIVE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Total Audits:       7229
+  Total Defects:      378
+  Overall Defect Rate: 5.23%
+  Weeks Tracked:      19
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📈 WEEK-OVER-WEEK DEFECT RATE TREND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Week  | Audits | Defects | Rate   | WoW Change
+  ------+--------+---------+--------+-----------
+  W 1   |    35  |      1  |  2.86% |   —
+  W 2   |   491  |     25  |  5.09% |   ▲ 2.23%
+  W 3   |   452  |     21  |  4.65% |   ▼ 0.44%
+  W 4   |   469  |     22  |  4.69% |   ▲ 0.04%
+  W 5   |   472  |     14  |  2.97% |   ▼ 1.72%
+  W 6   |   450  |     28  |  6.22% |   ▲ 3.25%
+  W 7   |   425  |     33  |  7.76% |   ▲ 1.54%
+  W 8   |   417  |     33  |  7.91% |   ▲ 0.15%
+  W 9   |   420  |     32  |  7.62% |   ▼ 0.29%
+  W10   |   405  |     16  |  3.95% |   ▼ 3.67%
+  W11   |   401  |     26  |  6.48% |   ▲ 2.53%
+  W12   |   397  |     28  |  7.05% |   ▲ 0.57%
+  W13   |   402  |     27  |  6.72% |   ▼ 0.33%
+  W14   |   400  |     26  |  6.50% |   ▼ 0.22%
+  W15   |   400  |     13  |  3.25% |   ▼ 3.25%
+  W16   |   389  |     19  |  4.88% |   ▲ 1.63%
+  W18   |   283  |      7  |  2.47% |   ▼ 2.41%
+  W19   |   253  |      4  |  1.58% |   ▼ 0.89%
+  W20   |   268  |      3  |  1.12% |   ▼ 0.46%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  DIP ANALYSIS — Weeks with Significant Rate Increase (≥1.5%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Week 2: Rate jumped from 2.86% → 5.09% (▲ 2.23%)
+  • Week 6: Rate jumped from 2.97% → 6.22% (▲ 3.25%)
+  • Week 7: Rate jumped from 6.22% → 7.76% (▲ 1.54%)
+  • Week 11: Rate jumped from 3.95% → 6.48% (▲ 2.53%)
+  • Week 16: Rate jumped from 3.25% → 4.88% (▲ 1.63%)
+
+  Root Causes for Dips:
+  • Right Reason Code (RRC) errors remain the #1 contributor across dip weeks
+  • Accurate & Complete Communication (RA) tool usage gaps during high-volume periods
+  • SW Adherence (ACC) — CARS tool annotation misses during shift transitions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 ERROR ATTRIBUTE BREAKDOWN (All Weeks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Attribute                          | Errors | % of Total
+  -----------------------------------+--------+-----------
+  Accurate & Complete Comm (RA)       |   167  |  41.4%
+  Right Reason Code (RRC)             |   156  |  38.7%
+  Associate Decision Making (ADM)     |    53  |  13.2%
+  Required Validation (RV)            |    14  |   3.5%
+  SW Adherence / Right Action (ACC)   |    13  |   3.2%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👥 MANAGER-WISE DEFECT TREND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Manager     | Audits | Defects | Rate   | Trend (Early→Recent)
+  ------------+--------+---------+--------+---------------------
+  padakank    |    98  |      1  |  1.02% | 0.0% → 0.0% → Stable
+  osameenu    |   156  |      2  |  1.28% | —
+  nsreerag    |   389  |      9  |  2.31% | 2.4% → 0.0% ✅ Improved
+  bossayan    |   385  |     13  |  3.38% | 3.1% → 0.0% ✅ Improved
+  augubabu    |   291  |     10  |  3.44% | 2.9% → 0.0% ✅ Improved
+  kampatis    |   423  |     15  |  3.55% | 2.6% → 2.6% → Stable
+  srujann     |    56  |      2  |  3.57% | —
+  aksjais     |   398  |     15  |  3.77% | 4.3% → 0.0% ✅ Improved
+  kpraveev    |   127  |      5  |  3.94% | —
+  subhekum    |   517  |     23  |  4.45% | 0.0% → 0.0% → Stable
+  ynnikith    |   708  |     32  |  4.52% | 5.5% → 0.0% ✅ Improved
+  ahujadiv    |   434  |     20  |  4.61% | 3.8% → 2.4% ✅ Improved
+  nmmylava    |   353  |     17  |  4.82% | 4.3% → 2.0% ✅ Improved
+  bharady     |    39  |      2  |  5.13% | —
+  thambido    |   262  |     15  |  5.73% | 3.7% → 0.0% ✅ Improved
+  vudaths     |   153  |      9  |  5.88% | —
+  sggarimi    |   246  |     15  |  6.10% | —
+  mrinshah    |   354  |     25  |  7.06% | 5.6% → 0.0% ✅ Improved
+  mpuranik    |   325  |     23  |  7.08% | 17.3% → 9.1% ✅ Improved
+  ancsingh    |   389  |     29  |  7.46% | 4.0% → 2.5% ✅ Improved
+  mkumrtq     |   324  |     25  |  7.72% | 9.7% → 0.0% ✅ Improved
+  aravadev    |   151  |     12  |  7.95% | —
+  kurmagad    |   350  |     32  |  9.14% | 8.3% → 2.5% ✅ Improved
+  hussm       |   279  |     26  |  9.32% | —
+  sahigour    |    10  |      1  | 10.00% | —
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏆 TOP 3 MANAGERS — BEST RQM SCORES (Appreciation)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🥇 padakank — 1.02% defect rate (98 audits, 1 defects)
+  🥈 osameenu — 1.28% defect rate (156 audits, 2 defects)
+  🥉 nsreerag — 2.31% defect rate (389 audits, 9 defects)
+
+  Congratulations to the above managers for maintaining exceptional quality standards!
+  Their consistent focus on process adherence and team coaching has driven outstanding results.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔄 REPEATED DEFAULTERS (Associates with 3+ defects across all weeks)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Associate   | Defects | Weeks Impacted | Manager
+  ------------+---------+----------------+--------
+  ctdavid     |      8  |             8  | ynnikith
+  kotesa      |      8  |             6  | kurmagad
+  hemkakii    |      7  |             7  | mkumrtq
+  temzjona    |      7  |             6  | thambido
+  shivayvc    |      7  |             6  | hussm
+  moizu       |      6  |             5  | mkumrtq
+  beautwne    |      5  |             5  | augubabu
+  bondisri    |      5  |             5  | ancsingh
+  aaindla     |      5  |             4  | ancsingh
+  kscb        |      5  |             3  | mrinshah
+  samagys     |      5  |             5  | aravadev
+  sydsaa      |      5  |             4  | hussm
+  saistaru    |      5  |             4  | subhekum
+  ykabandh    |      5  |             3  | ynnikith
+  wannekac    |      5  |             4  | ancsingh
+  pnavezkh    |      4  |             3  | mpuranik
+  medaashr    |      4  |             4  | bossayan
+  avasdivy    |      4  |             4  | vudaths
+  menduy      |      4  |             4  | mpuranik
+  saican      |      4  |             4  | aravadev
+  kadgnana    |      4  |             4  | aravadev
+  srinmath    |      4  |             4  | hussm
+  sancdodd    |      4  |             4  | sggarimi
+  maraasho    |      4  |             4  | hussm
+  sirshra     |      4  |             3  | subhekum
+  khandenn    |      4  |             3  | nmmylava
+  nagpatha    |      4  |             4  | ancsingh
+  chanilan    |      4  |             2  | sggarimi
+  vvasala     |      4  |             4  | subhekum
+  qkuathul    |      4  |             3  | thambido
+  gouthmad    |      3  |             3  | ynnikith
+  bonjaswo    |      3  |             3  | aravadev
+  tanishxx    |      3  |             3  | ahujadiv
+  abuzars     |      3  |             3  | vudaths
+  priymogh    |      3  |             2  | kampatis
+  omamdasi    |      3  |             3  | kampatis
+  nandunb     |      3  |             3  | ahujadiv
+  srigari     |      3  |             3  | ahujadiv
+  morigm      |      3  |             3  | kurmagad
+  saibodhu    |      3  |             2  | aravadev
+  smadhavy    |      3  |             3  | nmmylava
+  srujagaj    |      3  |             3  | ahujadiv
+  admbadam    |      3  |             3  | aravadev
+  bharaujo    |      3  |             3  | kurmagad
+  mzu         |      3  |             3  | ancsingh
+  oyennsri    |      3  |             3  | subhekum
+  pranavky    |      3  |             2  | ahujadiv
+  kothrish    |      3  |             3  | mrinshah
+
+  Action: Managers to conduct 1:1 coaching sessions with repeated defaulters.
+  Focus areas: CARS tool usage, correct reason code selection, and SOP adherence.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 KEY INSIGHTS & ACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Overall Trend: IMPROVING
+     • First 4 weeks avg: 4.77% → Recent 4 weeks avg: 2.77%
+     • Week 20 achieved the BEST defect rate of the year: 1.12%
+
+  📌 Top Error Category: Right Reason Code (RRC) — 156 errors (39% of all)
+     Action: Reinforce CASA SOP training on correct reason code selection
+
+  📌 Focus Areas for Sustained Improvement:
+     1. Continue CARS tool refresher sessions
+     2. Weekly calibration calls for reason code alignment
+     3. Targeted coaching for repeated defaulters
+     4. Recognize and reward consistent performers
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔗 INTERACTIVE DASHBOARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  https://rsob-rqm.github.io/Quality-Report/
+
+  Features: Associate-level drill-down, error breakdowns, leadership reports,
+  raw data export, and automated feedback tracking.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Best regards,
+RSOB Quality Team
