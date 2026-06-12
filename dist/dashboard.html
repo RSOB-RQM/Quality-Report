@@ -234,7 +234,7 @@ function computeAssociateSummaries(records,allRecords){
     if(!map.has(r.associateLogin))map.set(r.associateLogin,{login:r.associateLogin,audits:0,defects:0,errors:[],findings:[]});
     const x=map.get(r.associateLogin);x.audits++;
     if(r.defectFlag)x.defects++;
-    for(const attr of ATTRS){if(r[attr.key]==='No'){x.errors.push(attr.label);const f=r[attr.fKey];const c=r[attr.cKey]||'';if(f)x.findings.push({attribute:attr.label,finding:f,comment:c});}}
+    for(const attr of ATTRS){if(r[attr.key]==='No'){x.errors.push(attr.label);const f=r[attr.fKey];const c=r[attr.cKey]||'';if(f)x.findings.push({attribute:attr.label,finding:f,comment:c,caseId:r.transactionId||''});}}
   }
   const result=[];
   for(const[login,d]of map){
@@ -246,8 +246,9 @@ function computeAssociateSummaries(records,allRecords){
     // Top findings
     const fMap=new Map();
     const fComments=new Map();
-    for(const f of d.findings){const k=f.attribute+'||'+f.finding;fMap.set(k,(fMap.get(k)||0)+1);if(f.comment&&!fComments.has(k))fComments.set(k,f.comment);}
-    const topFindings=[...fMap.entries()].map(([k,count])=>{const[attribute,finding]=k.split('||');return{attribute,finding,count,comment:fComments.get(k)||''};}).sort((a,b)=>b.count-a.count).slice(0,5);
+    const fCaseIds=new Map();
+    for(const f of d.findings){const k=f.attribute+'||'+f.finding;fMap.set(k,(fMap.get(k)||0)+1);if(f.comment&&!fComments.has(k))fComments.set(k,f.comment);if(f.caseId){if(!fCaseIds.has(k))fCaseIds.set(k,[]);fCaseIds.get(k).push(f.caseId);}}
+    const topFindings=[...fMap.entries()].map(([k,count])=>{const[attribute,finding]=k.split('||');return{attribute,finding,count,comment:fComments.get(k)||'',caseIds:fCaseIds.get(k)||[]};}).sort((a,b)=>b.count-a.count).slice(0,5);
     // Trend
     const weeks=computeWeeklySummary(records.filter(r=>r.associateLogin===login));
     let trend='stable';
@@ -968,7 +969,8 @@ function renderAssociateSummary(summaries,repeatedDefaulters){
       const findingsHtml=row.topFindings.map(f=>{
         const isOthers=f.finding.toLowerCase()==='others';
         const commentHtml=isOthers&&f.comment?'<div style="font-size:11px;color:#64748b;margin-top:4px;padding:4px 8px;background:#f8fafc;border-radius:4px;border-left:2px solid #94a3b8">RQM Comments: '+f.comment+'</div>':'';
-        return`<div style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;border-radius:6px;background:#fff;border:1px solid #e2e8f0"><div style="display:flex;align-items:flex-start;gap:8px"><span class="badge badge-${f.attribute.toLowerCase()}" style="flex-shrink:0">${f.attribute}</span><span style="font-size:12px;color:#334155;flex:1">${f.finding}</span><span style="font-size:11px;color:#94a3b8;flex-shrink:0">${f.count}x</span></div>${commentHtml}</div>`;
+        const caseIdHtml=f.caseIds&&f.caseIds.length>0?'<div style="font-size:11px;color:#1e40af;margin-top:4px;padding:4px 8px;background:#eff6ff;border-radius:4px;border-left:2px solid #1e40af">Case IDs: '+f.caseIds.join(', ')+'</div>':'';
+        return`<div style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;border-radius:6px;background:#fff;border:1px solid #e2e8f0"><div style="display:flex;align-items:flex-start;gap:8px"><span class="badge badge-${f.attribute.toLowerCase()}" style="flex-shrink:0">${f.attribute}</span><span style="font-size:12px;color:#334155;flex:1">${f.finding}</span><span style="font-size:11px;color:#94a3b8;flex-shrink:0">${f.count}x</span></div>${caseIdHtml}${commentHtml}</div>`;
       }).join('');
       html+=`<tr style="background:#f8fafc"><td colspan="${colSpan}" style="padding:12px 20px;border-bottom:1px solid #e2e8f0"><div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:8px">Top Auditor Findings for ${row.associateLogin}:</div><div style="display:flex;flex-direction:column;gap:6px">${findingsHtml}</div></td></tr>`;
     }
@@ -1034,9 +1036,9 @@ function renderErrorDetailForAssociate(records){
   let rows=errorRecords.sort((a,b)=>b.transactionWeek-a.transactionWeek).map(r=>{
     const attrs=[];const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){attrs.push(attr.label);const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    return`<tr><td>WK ${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'—'}</td></tr>`;
+    return`<tr><td>WK ${r.transactionWeek}</td><td style="font-size:12px;color:#1e40af;font-weight:500">${r.transactionId||'—'}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'—'}</td></tr>`;
   }).join('');
-  return`<div class="section"><h3 style="margin-bottom:16px">Error Details</h3><div style="overflow-x:auto"><table><thead><tr><th>Week</th><th>Date</th><th>Disruption</th><th>Failed Attributes</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  return`<div class="section"><h3 style="margin-bottom:16px">Error Details</h3><div style="overflow-x:auto"><table><thead><tr><th>Week</th><th>Case ID</th><th>Date</th><th>Disruption</th><th>Failed Attributes</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function renderBestPractices(){
@@ -1445,14 +1447,14 @@ function renderRawData(){
   let weekOpts='<option value="">All Weeks</option>'+allWeeks.map(w=>`<option value="${w}" ${week===String(w)?'selected':''}>WK ${w}</option>`).join('');
   let monthOpts='<option value="">All Months</option>'+months.map(m=>`<option value="${m}" ${month===String(m)?'selected':''}>${MONTH_NAMES[m]}</option>`).join('');
 
-  let tableRows=pageRecords.length===0?'<tr><td colspan="13" style="text-align:center;padding:32px;color:#94a3b8">No records found for the selected filters.</td></tr>':pageRecords.map((r,idx)=>{
+  let tableRows=pageRecords.length===0?'<tr><td colspan="14" style="text-align:center;padding:32px;color:#94a3b8">No records found for the selected filters.</td></tr>':pageRecords.map((r,idx)=>{
     const isDefect=r.defectFlag;
     const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
     const findStr=findings.join('; ')||'—';
     const rowClass=isDefect?'defect-row':'';
     function ynCell(val){return'<span class="yes-no '+(val==='Yes'?'yes':'no')+'">'+val+'</span>';}
-    return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td>${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
+    return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td style="font-size:12px;color:#1e40af;font-weight:500">${r.transactionId||'—'}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td>${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
   }).join('');
 
   let pagination='';
@@ -1472,7 +1474,7 @@ function renderRawData(){
       <div style="display:flex;align-items:center;gap:6px"><input type="text" id="rawSearch" placeholder="Search associate login…" value="${search}" style="padding:7px 12px;border:1px solid #dbeafe;border-radius:6px;font-size:13px;min-width:200px"><button class="csv-btn" onclick="rawSearchApply()">Search</button></div>
     </div>
     <div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0;background:#fff">
-      <table style="min-width:1200px"><thead><tr><th>Wk</th><th>Date</th><th>Region</th><th>Associate</th><th>Supervisor</th><th>Disruption Type</th><th style="text-align:center">ADM</th><th style="text-align:center">RA</th><th style="text-align:center">RRC</th><th style="text-align:center">ACC</th><th style="text-align:center">RV</th><th style="text-align:center">Defect</th><th style="min-width:250px">Findings</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <table style="min-width:1300px"><thead><tr><th>Wk</th><th>Case ID</th><th>Date</th><th>Region</th><th>Associate</th><th>Supervisor</th><th>Disruption Type</th><th style="text-align:center">ADM</th><th style="text-align:center">RA</th><th style="text-align:center">RRC</th><th style="text-align:center">ACC</th><th style="text-align:center">RV</th><th style="text-align:center">Defect</th><th style="min-width:250px">Findings</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>
     ${pagination}
   </div>`;
@@ -1703,10 +1705,10 @@ function downloadRawData(){
   if(search)records=records.filter(r=>r.associateLogin.toLowerCase().includes(search.toLowerCase()));
   const pageSize=50;const page=state.rawFilters.page;
   const pageRecords=records.slice((page-1)*pageSize,page*pageSize);
-  const headers=['Wk','Date','Region','Associate','Supervisor','Disruption Type','ADM','RA','RRC','ACC','RV','Defect','Findings'];
+  const headers=['Wk','Case ID','Date','Region','Associate','Supervisor','Disruption Type','ADM','RA','RRC','ACC','RV','Defect','Findings'];
   const csvRows=pageRecords.map(r=>{
     const findings=[];for(const attr of ATTRS){if(r[attr.key]==='No'){const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    return[r.transactionWeek,r.transactionDate,r.region,r.associateLogin,r.supervisorLogin,r.disruptionType,r.adm,r.ra,r.rrc,r.acc,r.rv,r.defectFlag?'Yes':'No',findings.join('; ')];
+    return[r.transactionWeek,r.transactionId||'',r.transactionDate,r.region,r.associateLogin,r.supervisorLogin,r.disruptionType,r.adm,r.ra,r.rrc,r.acc,r.rv,r.defectFlag?'Yes':'No',findings.join('; ')];
   });
   downloadCsv('raw-data.csv',headers,csvRows);
 }
