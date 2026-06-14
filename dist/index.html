@@ -487,6 +487,7 @@ let state={
   sortAsc:false,
   leadershipRegion:'',
   leadershipWeek:'last4',
+  glossaryRegion:'',
   l5Tab:'managers',
 };
 
@@ -1083,9 +1084,9 @@ function renderErrorDetailForAssociate(records){
   let rows=errorRecords.sort((a,b)=>b.transactionWeek-a.transactionWeek).map(r=>{
     const attrs=[];const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){attrs.push(attr.label);const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    return`<tr><td>WK ${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'-'}</td></tr>`;
+    return`<tr><td>WK ${r.transactionWeek}</td><td style="font-size:12px;color:#1e40af;font-weight:500">${r.transactionId||'—'}</td><td>${r.transactionDate}</td><td>${r.disruptionType}</td><td>${attrs.map(a=>'<span class="badge badge-'+a.toLowerCase()+'">'+a+'</span>').join('')}</td><td style="font-size:11px;color:#64748b;white-space:normal;max-width:300px">${findings.join('; ')||'-'}</td></tr>`;
   }).join('');
-  return`<div class="section"><h3 style="margin-bottom:16px">Error Details</h3><div style="overflow-x:auto"><table><thead><tr><th>Week</th><th>Date</th><th>Disruption</th><th>Failed Attributes</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  return`<div class="section"><h3 style="margin-bottom:16px">Error Details</h3><div style="overflow-x:auto"><table><thead><tr><th>Week</th><th>Case ID</th><th>Date</th><th>Disruption</th><th>Failed Attributes</th><th>Findings</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function renderBestPractices(){
@@ -1105,6 +1106,7 @@ function renderBestPractices(){
 function renderGlossary(){
   // --- Section 1: Quality Parameters Visual Cards ---
   var cardsHtml='';
+  var glossaryRegion=state.glossaryRegion||'';
   var attrDescriptions={
     ADM:'Evaluates whether the associate followed the Standard Work (SW) to make the correct decision - add truck, cancel truck, or deny the request.',
     RA:'Checks if the associate took the correct action as per the SW outcome. This includes proper annotation of RS tool validator details and using the latest tool version.',
@@ -1123,13 +1125,13 @@ function renderGlossary(){
     var a=ATTRS[i];
     var color=ATTR_COLORS[a.label]||'#475569';
     var bg=ATTR_BG[a.label]||'#f1f5f9';
-    // Calculate current error count for this attribute
+    // Calculate current error count for this attribute (filtered by region)
     var allWeeks=getAvailableWeeks();
     var last4=allWeeks.slice(-4);
-    var recentRecs=AUDIT_DATA.filter(function(r){return last4.indexOf(r.transactionWeek)>=0;});
+    var recentRecs=AUDIT_DATA.filter(function(r){return last4.indexOf(r.transactionWeek)>=0&&(!glossaryRegion||r.region===glossaryRegion);});
     var errCount=0;
     for(var j=0;j<recentRecs.length;j++){if(recentRecs[j][a.key]==='No')errCount++;}
-    var errRate=(errCount/recentRecs.length*100).toFixed(1);
+    var errRate=recentRecs.length>0?(errCount/recentRecs.length*100).toFixed(1):'0.0';
     cardsHtml+='<div style="background:'+bg+';border-radius:12px;padding:20px;border-left:5px solid '+color+';margin-bottom:16px">';
     cardsHtml+='<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">';
     cardsHtml+='<div style="flex:1;min-width:280px">';
@@ -1205,7 +1207,13 @@ function renderGlossary(){
   actionsHtml+='</div>';
 
   // --- Combine all sections ---
-  var html='<div style="margin-bottom:24px"><h2 style="font-size:20px;color:#1e293b;margin-bottom:4px">\uD83D\uDCD6 Quality Parameters & Glossary</h2><p class="text-muted">Understanding the 5 quality attributes that define audit performance in RSOB.</p></div>';
+  var regions=getAvailableRegions();
+  var glossaryRegion=state.glossaryRegion||'';
+  var regionOpts='<option value="">All Regions (NA & EU)</option>';
+  for(var ri=0;ri<regions.length;ri++){regionOpts+='<option value="'+regions[ri]+'"'+(glossaryRegion===regions[ri]?' selected':'')+'>'+regions[ri]+'</option>';}
+  var html='<div style="margin-bottom:24px"><h2 style="font-size:20px;color:#1e293b;margin-bottom:4px">\uD83D\uDCD6 Quality Parameters & Glossary</h2><p class="text-muted" style="margin-bottom:12px">Overview of process performance — understanding the 5 quality attributes that define audit performance in RSOB.</p>';
+  html+='<div class="filter-bar" style="margin-top:12px"><span style="font-size:13px;font-weight:600;color:#1e40af">Region:</span><select id="glossaryRegion">'+regionOpts+'</select></div>';
+  html+='</div>';
   html+=cardsHtml;
   html+=scoringHtml;
   html+=actionsHtml;
@@ -1494,14 +1502,14 @@ function renderRawData(){
   let weekOpts='<option value="">All Weeks</option>'+allWeeks.map(w=>`<option value="${w}" ${week===String(w)?'selected':''}>WK ${w}</option>`).join('');
   let monthOpts='<option value="">All Months</option>'+months.map(m=>`<option value="${m}" ${month===String(m)?'selected':''}>${MONTH_NAMES[m]}</option>`).join('');
 
-  let tableRows=pageRecords.length===0?'<tr><td colspan="13" style="text-align:center;padding:32px;color:#94a3b8">No records found for the selected filters.</td></tr>':pageRecords.map((r,idx)=>{
+  let tableRows=pageRecords.length===0?'<tr><td colspan="14" style="text-align:center;padding:32px;color:#94a3b8">No records found for the selected filters.</td></tr>':pageRecords.map((r,idx)=>{
     const isDefect=r.defectFlag;
     const findings=[];
     for(const attr of ATTRS){if(r[attr.key]==='No'){const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
     const findStr=findings.join('; ')||'-';
     const rowClass=isDefect?'defect-row':'';
     function ynCell(val){return'<span class="yes-no '+(val==='Yes'?'yes':'no')+'">'+val+'</span>';}
-    return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td>${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
+    return`<tr class="${rowClass}"><td>${r.transactionWeek}</td><td style="font-size:12px;color:#1e40af;font-weight:500">${r.transactionId||'—'}</td><td>${r.transactionDate}</td><td>${r.region}</td><td style="font-weight:600">${r.associateLogin}</td><td>${r.supervisorLogin}</td><td>${r.disruptionType}</td><td style="text-align:center">${ynCell(r.adm)}</td><td style="text-align:center">${ynCell(r.ra)}</td><td style="text-align:center">${ynCell(r.rrc)}</td><td style="text-align:center">${ynCell(r.acc)}</td><td style="text-align:center">${ynCell(r.rv)}</td><td style="text-align:center"><span class="yes-no ${isDefect?'no':'yes'}">${isDefect?'Yes':'No'}</span></td><td style="white-space:normal;max-width:350px;font-size:11px;color:#64748b">${findStr}</td></tr>`;
   }).join('');
 
   let pagination='';
@@ -1521,7 +1529,7 @@ function renderRawData(){
       <div style="display:flex;align-items:center;gap:6px"><input type="text" id="rawSearch" placeholder="Search associate loginâ€¦" value="${search}" style="padding:7px 12px;border:1px solid #dbeafe;border-radius:6px;font-size:13px;min-width:200px"><button class="csv-btn" onclick="rawSearchApply()">Search</button></div>
     </div>
     <div style="overflow-x:auto;border-radius:8px;border:1px solid #e2e8f0;background:#fff">
-      <table style="min-width:1200px"><thead><tr><th>Wk</th><th>Date</th><th>Region</th><th>Associate</th><th>Supervisor</th><th>Disruption Type</th><th style="text-align:center" title="Associate Decision Making - Was the SW followed to arrive at the decision?">ADM</th><th style="text-align:center" title="SW Adherence Right Action - Was the right action taken as per SW outcome?">RA</th><th style="text-align:center" title="Right Reason Code - Was the correct reason code used?">RRC</th><th style="text-align:center" title="Accurate & Complete Communication - Was required information shared with the site?">ACC</th><th style="text-align:center" title="Required Validation - Did the associate do all necessary checks?">RV</th><th style="text-align:center">Defect</th><th style="min-width:250px">Findings</th></tr></thead><tbody>${tableRows}</tbody></table>
+      <table style="min-width:1300px"><thead><tr><th>Wk</th><th>Case ID</th><th>Date</th><th>Region</th><th>Associate</th><th>Supervisor</th><th>Disruption Type</th><th style="text-align:center" title="Associate Decision Making - Was the SW followed to arrive at the decision?">ADM</th><th style="text-align:center" title="SW Adherence Right Action - Was the right action taken as per SW outcome?">RA</th><th style="text-align:center" title="Right Reason Code - Was the correct reason code used?">RRC</th><th style="text-align:center" title="Accurate & Complete Communication - Was required information shared with the site?">ACC</th><th style="text-align:center" title="Required Validation - Did the associate do all necessary checks?">RV</th><th style="text-align:center">Defect</th><th style="min-width:250px">Findings</th></tr></thead><tbody>${tableRows}</tbody></table>
     </div>
     ${pagination}
   </div>`;
@@ -1534,6 +1542,7 @@ function bindDashboard(){
   const regionEl=document.getElementById('filterRegion');
   const weeksEl=document.getElementById('filterWeeks');
   const monthEl=document.getElementById('filterMonth');
+  const glossaryRegionEl=document.getElementById('glossaryRegion');
   if(regionEl)regionEl.onchange=function(){state.filters.region=this.value;render();};
   if(weeksEl)weeksEl.onchange=function(){applyWeekPreset(this.value);render();};
   if(monthEl)monthEl.onchange=function(){
@@ -1542,6 +1551,7 @@ function bindDashboard(){
     else{state.filters.selectedMonth=null;applyWeekPreset('last4');}
     render();
   };
+  if(glossaryRegionEl)glossaryRegionEl.onchange=function(){state.glossaryRegion=this.value;render();};
 }
 
 function bindRawData(){
@@ -1752,10 +1762,10 @@ function downloadRawData(){
   if(search)records=records.filter(r=>r.associateLogin.toLowerCase().includes(search.toLowerCase()));
   const pageSize=50;const page=state.rawFilters.page;
   const pageRecords=records.slice((page-1)*pageSize,page*pageSize);
-  const headers=['Wk','Date','Region','Associate','Supervisor','Disruption Type','ADM','RA','RRC','ACC','RV','Defect','Findings'];
+  const headers=['Wk','Case ID','Date','Region','Associate','Supervisor','Disruption Type','ADM','RA','RRC','ACC','RV','Defect','Findings'];
   const csvRows=pageRecords.map(r=>{
     const findings=[];for(const attr of ATTRS){if(r[attr.key]==='No'){const f=r[attr.fKey];if(f)findings.push(attr.label+': '+f);}}
-    return[r.transactionWeek,r.transactionDate,r.region,r.associateLogin,r.supervisorLogin,r.disruptionType,r.adm,r.ra,r.rrc,r.acc,r.rv,r.defectFlag?'Yes':'No',findings.join('; ')];
+    return[r.transactionWeek,r.transactionId||'',r.transactionDate,r.region,r.associateLogin,r.supervisorLogin,r.disruptionType,r.adm,r.ra,r.rrc,r.acc,r.rv,r.defectFlag?'Yes':'No',findings.join('; ')];
   });
   downloadCsv('raw-data.csv',headers,csvRows);
 }
