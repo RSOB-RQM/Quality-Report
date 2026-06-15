@@ -1596,9 +1596,15 @@ function sendEmail(type, login){
     email=buildFeedbackEmail(login,records,rate,weekNumber);
   }
   var link=buildMailtoLink(email.to,email.subject,email.body);
-  window.location.href=link;
+  // Use anchor element click for reliable mailto on HTTPS pages
+  var a=document.createElement('a');
+  a.href=link;
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){document.body.removeChild(a);},100);
   setFeedbackShared(state.user.login,weekNumber,login);
-  render();
+  setTimeout(function(){render();},200);
 }
 function openEmsLink(login){
   var records=getFilteredRecords().filter(function(r){return r.associateLogin===login&&r.defectFlag;});
