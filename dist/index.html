@@ -786,7 +786,7 @@ function renderNav(){
     if(user.role==='admin'){navLinks+='<button class="nav-link '+leaderActive+'" onclick="state.currentView=\'leadership\';render()">Leadership Report</button>';}
   return`<nav class="nav">
     <div style="display:flex;align-items:center;gap:20px">
-      <span class="nav-title">RSOB - Quality Performance Dashboard - NA & EU</span><span style="font-size:11px;color:#93c5fd;margin-left:12px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px">Last Updated: 2 June 2026 | Week 21</span>
+      <span class="nav-title">RSOB - Quality Performance Dashboard - NA & EU</span><span style="font-size:11px;color:#93c5fd;margin-left:12px;padding:2px 8px;background:rgba(255,255,255,.1);border-radius:4px">Last Updated: 15 June 2026 | Week 22</span>
       <span style="width:1px;height:20px;background:rgba(255,255,255,.3)"></span>
       ${navLinks}
     </div>
@@ -1160,10 +1160,10 @@ function renderGlossary(){
   // --- Section 3: Actions & Impact (W14 spike and improvement) ---
   var actionsHtml='<div class="section" style="border-left:4px solid #059669;margin-bottom:20px">';
   actionsHtml+='<h3 style="color:#059669;margin-bottom:12px">\uD83D\uDE80 Actions & Impact - Quality Improvement Journey</h3>';
-  actionsHtml+='<p class="text-muted mb-16">Analysis of defect trend from Week 16-21 showing sustained quality improvement.</p>';
+  actionsHtml+='<p class="text-muted mb-16">Analysis of defect trend from Week 16-22 showing sustained quality improvement.</p>';
   // Trend visual
   actionsHtml+='<div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px">';
-  var trendData=[{wk:16,rate:4.9},{wk:17,rate:3.2},{wk:18,rate:2.5},{wk:19,rate:1.8},{wk:20,rate:1.1},{wk:21,rate:0.4}];
+  var trendData=[{wk:16,rate:4.9},{wk:17,rate:3.2},{wk:18,rate:2.5},{wk:19,rate:1.8},{wk:20,rate:1.1},{wk:21,rate:0.4},{wk:22,rate:1.6}];
   for(var ti=0;ti<trendData.length;ti++){
     var td=trendData[ti];
     var barH=Math.max(td.rate*8,10);
