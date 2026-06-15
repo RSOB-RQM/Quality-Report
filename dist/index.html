@@ -1587,6 +1587,14 @@ function sendEmail(type, login){
   var records=getFilteredRecords().filter(function(r){return r.associateLogin===login;});
   var weeks=records.map(function(r){return r.transactionWeek;});
   var weekNumber=weeks.length>0?Math.max.apply(null,weeks):0;
+  if(type==='feedback'){
+    // Open Microsoft Forms feedback form
+    var formUrl='https://forms.office.com/Pages/ResponsePage.aspx?id=ShCAUi1HOEWczx4dDv6LG_ZtilvFoQpFq5WE5nIo_yBUQUNXNThaTkRIRjFHWlE4MDNKRldCRlpaVy4u';
+    window.open(formUrl,'_blank');
+    setFeedbackShared(state.user.login,weekNumber,login);
+    setTimeout(function(){render();},200);
+    return;
+  }
   var email;
   if(type==='appreciate'){
     email=buildAppreciationEmail(login,records,weekNumber);
