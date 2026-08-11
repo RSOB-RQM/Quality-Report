@@ -795,7 +795,7 @@ function renderNav(){
       ${navLinks}
     </div>
     <div class="nav-right">
-      <a href="https://forms.office.com/pages/responsepage.aspx?id=ShCAUi1HOEWczx4dDv6LG_ZtilvFoQpFq5WE5nIo_yBUQUNXNThaTkRIRjFHWlE4MDNKRldCRlpaVy4u&route=shorturl" target="_blank" style="padding:4px 12px;font-size:11px;font-weight:600;border-radius:6px;background:#059669;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:4px">\uD83D\uDCDD Feedback</a>
+      <a href="mailto:?subject=Quality%20Feedback" style="padding:4px 12px;font-size:11px;font-weight:600;border-radius:6px;background:#059669;color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:4px">\uD83D\uDCDD Feedback</a>
       <span class="role-badge ${roleClass}">${roleLabel}</span>
       <span class="user-name">${user.login}</span>
       <button class="logout-btn" onclick="logout()">Logout</button>
@@ -1592,9 +1592,10 @@ function sendEmail(type, login){
   var weeks=records.map(function(r){return r.transactionWeek;});
   var weekNumber=weeks.length>0?Math.max.apply(null,weeks):0;
   if(type==='feedback'){
-    // Open Microsoft Forms feedback form
-    var formUrl='https://forms.office.com/Pages/ResponsePage.aspx?id=ShCAUi1HOEWczx4dDv6LG_ZtilvFoQpFq5WE5nIo_yBUQUNXNThaTkRIRjFHWlE4MDNKRldCRlpaVy4u';
-    window.open(formUrl,'_blank');
+    // Open mailto to the associate directly
+    var subject=encodeURIComponent('Quality Feedback - Week '+weekNumber);
+    var body=encodeURIComponent('Hi '+login+',\n\nThis is regarding your quality audit for Week '+weekNumber+'.\n\nPlease review the following observation and let me know if you have any questions.\n\nRegards');
+    window.location.href='mailto:'+login+'@amazon.com?subject='+subject+'&body='+body;
     setFeedbackShared(state.user.login,weekNumber,login);
     setTimeout(function(){render();},200);
     return;
