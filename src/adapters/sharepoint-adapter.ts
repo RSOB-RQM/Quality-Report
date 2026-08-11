@@ -1,3 +1,4 @@
+
 import type { AuditRecord } from '../models/audit-types';
 import type { EmailAutomationEnvConfig } from '../config/env';
 
@@ -30,6 +31,7 @@ export interface SharePointAdapter {
  */
 function parseSharePointItem(item: Record<string, unknown>): AuditRecord {
   return {
+    transactionId: String(item.TransactionId ?? item.ID ?? item.Id ?? ''),
     team: String(item.Team ?? ''),
     region: String(item.Region ?? ''),
     disruptionType: String(item.DisruptionType ?? ''),
@@ -173,3 +175,4 @@ export class SharePointAdapterImpl implements SharePointAdapter {
  * Exported for testing purposes.
  */
 export { parseSharePointItem };
+
