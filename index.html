@@ -232,8 +232,7 @@ function computeAssociateSummaries(records,allRecords){
   const map=new Map();
   for(const r of records){
     if(!map.has(r.associateLogin))map.set(r.associateLogin,{login:r.associateLogin,manager:'',audits:0,defects:0,errors:[],findings:[]});
-    const x=map.get(r.associateLogin);x.audits++;
-    if(!x.manager && r.supervisorLogin) x.manager = r.supervisorLogin;
+    const x=map.get(r.associateLogin);x.audits++;if(!x.manager&&r.supervisorLogin)x.manager=r.supervisorLogin;
     if(r.defectFlag)x.defects++;
     for(const attr of ATTRS){if(r[attr.key]==='No'){x.errors.push(attr.label);const f=r[attr.fKey];const c=r[attr.cKey]||'';if(f)x.findings.push({attribute:attr.label,finding:f,comment:c});}}
   }
@@ -1587,8 +1586,8 @@ function downloadWeekSummary(){
 function downloadAssociateSummary(){
   const records=getFilteredRecords();
   const summaries=computeAssociateSummaries(records,AUDIT_DATA);
-  const headers=['Associate','Manager','Total Audits','Defects','Defect Rate','Top Errors','Trend'];
-  const csvRows=summaries.map(r=>[r.associateLogin,r.managerLogin||'',r.totalAudits,r.totalDefects,r.defectRate+'%',r.errorAttributes.slice(0,3).map(a=>a.attribute+'('+a.count+')').join(', '),r.trend]);
+  const headers=['Associate','Total Audits','Defects','Defect Rate','Top Errors','Trend'];
+  const csvRows=summaries.map(r=>[r.associateLogin,r.totalAudits,r.totalDefects,r.defectRate+'%',r.errorAttributes.slice(0,3).map(a=>a.attribute+'('+a.count+')').join(', '),r.trend]);
   downloadCsv('associate-summary.csv',headers,csvRows);
 }
 function downloadDefaulters(){
@@ -1847,3 +1846,4 @@ function initFeedbackTracker(managerLogin, weekNumber, associateLogins) {
 </script>
 </body>
 </html>
+
