@@ -5,7 +5,7 @@
 // =============================================================================
 
 import type { AuditRecord } from '../models/audit-types';
-import type { ExcelParseWarning } from '../models/dashboard-types';
+type ExcelParseWarning = { row: number; message: string; field?: string };
 
 /**
  * Safely converts a value to string.
