@@ -2,8 +2,6 @@
 // Dashboard Data API Route — GET /api/dashboard
 // =============================================================================
 
-import { createAuthModule } from '../../../auth/auth';
-import { getFilter } from '../../../access-control/access-control';
 import { createDataAccess } from '../../../data/data-access';
 import {
   computeWeeklySummary,
@@ -147,11 +145,9 @@ function buildWeekSummaryTable(records: AuditRecord[]): WeekSummaryTableRow[] {
  * An associate is a repeated defaulter if they had defects in 3+ of the last 5 weeks.
  */
 function buildRepeatedDefaulters(allScopedRecords: AuditRecord[]): RepeatedDefaulter[] {
-  // Get the last 5 weeks from all available data
   const allWeeks = [...new Set(allScopedRecords.map((r) => r.transactionWeek))].sort((a, b) => a - b);
   const last5Weeks = new Set(allWeeks.slice(-5));
 
-  // Only look at records in the last 5 weeks
   const recentRecords = allScopedRecords.filter((r) => last5Weeks.has(r.transactionWeek));
 
   const map = new Map<string, Map<number, number>>();
@@ -198,33 +194,23 @@ function filterByMonth(records: AuditRecord[], month: number): AuditRecord[] {
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    // 1. Authenticate
-    const auth = createAuthModule();
-    const user = await auth.getUser(request);
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    // 1. Default user (auth bypassed for Amplify deployment)
+    const user = { login: 'mpuranik', role: 'admin' as const };
 
-    // 2. Apply access control filter
-    const filter = getFilter(user);
-
-    // 3. Fetch scoped records
+    // 2. Fetch all records (no access control filter — admin sees everything)
     const dataAccess = createDataAccess();
-    const scopedRecords = await dataAccess.getRecords(filter);
+    const scopedRecords = await dataAccess.getRecords();
 
-    // 4. Parse optional week/month/team filters from query params
+    // 3. Parse optional week/month/team filters from query params
     const url = new URL(request.url);
     const weeksParam = url.searchParams.get('weeks');
     const monthParam = url.searchParams.get('month');
     const teamFilterParam = url.searchParams.get('teamFilter');
     const regionParam = url.searchParams.get('region') ?? '';
 
-    // If admin requests teamFilter=true, re-fetch records filtered by supervisorLogin
+    // If admin requests teamFilter=true, filter by supervisorLogin
     let filteredRecords = scopedRecords;
-    if (teamFilterParam === 'true' && user.role === 'admin') {
+    if (teamFilterParam === 'true') {
       filteredRecords = scopedRecords.filter((r) => r.supervisorLogin === user.login);
     }
     filteredRecords = filterByRegion(filteredRecords, regionParam);
@@ -239,7 +225,7 @@ export async function GET(request: Request): Promise<Response> {
       }
     }
 
-    // 5. Run all aggregation functions on filtered records
+    // 4. Run all aggregation functions on filtered records
     const weeklySummary = computeWeeklySummary(filteredRecords);
     const monthlySummary = computeMonthlySummary(filteredRecords);
     const errorBreakdown = computeErrorBreakdown(filteredRecords);
@@ -247,46 +233,29 @@ export async function GET(request: Request): Promise<Response> {
     const appealSummary = computeAppealSummary(filteredRecords);
     const commonFindings = computeCommonFindings(filteredRecords);
 
-    // 6. Build error detail log
+    // 5. Build error detail log
     const errorRecords = filterErrorRecords(filteredRecords);
     const errorDetails = sortErrorLogDesc(errorRecords.map(toErrorDetailRecord));
 
-    // 7. Highlight guidance
+    // 6. Highlight guidance
     const allFailedAttributes = [
       ...new Set(errorDetails.flatMap((e) => e.failedAttributes)),
     ];
     const guidanceHighlights = highlightGuidance(allFailedAttributes, []);
 
-    // 8. Role-specific computed fields
+    // 7. Role-specific computed fields
     const associateSummaries = buildAssociateSummaries(filteredRecords);
     const weekSummaryTable = buildWeekSummaryTable(filteredRecords);
     // Repeated defaulters always use rolling last 5 weeks from scoped (region-filtered but NOT week-filtered) data
     const regionFilteredRecords = filterByRegion(
-      teamFilterParam === 'true' && user.role === 'admin'
+      teamFilterParam === 'true'
         ? scopedRecords.filter((r) => r.supervisorLogin === user.login)
         : scopedRecords,
       regionParam,
     );
     const repeatedDefaulters = buildRepeatedDefaulters(regionFilteredRecords);
 
-    // 9. Process-level findings (computed from ALL records, unfiltered by role)
-    // This lets associates compare their errors to process-wide patterns
-    let processLevelFindings: CommonFindingsResult | null = null;
-    if (user.role === 'associate') {
-      const allRecords = await dataAccess.getRecords();
-      let allFiltered = allRecords;
-      if (weeksParam) {
-        const weeks = weeksParam.split(',').map((w) => parseInt(w.trim(), 10)).filter((n) => !isNaN(n));
-        allFiltered = filterByWeeks(allFiltered, weeks);
-      }
-      if (monthParam) {
-        const month = parseInt(monthParam, 10);
-        if (!isNaN(month)) allFiltered = filterByMonth(allFiltered, month);
-      }
-      processLevelFindings = computeCommonFindings(allFiltered);
-    }
-
-    // 10. Available weeks and months for selectors
+    // 8. Available weeks and months for selectors
     const availableWeeks = [...new Set(scopedRecords.map((r) => r.transactionWeek))].sort((a, b) => a - b);
     const availableMonths = [...new Set(scopedRecords.map((r) => {
       const parts = r.transactionDate.split('-');
@@ -294,10 +263,10 @@ export async function GET(request: Request): Promise<Response> {
     }))].sort((a, b) => a - b);
     const availableRegions = [...new Set(scopedRecords.map((r) => r.region).filter(Boolean))].sort();
 
-    // 11. allRecords for admin raw data reference
-    const allRecords = user.role === 'admin' ? filteredRecords : undefined;
+    // 9. allRecords for admin raw data reference
+    const allRecords = filteredRecords;
 
-    // 12. Return JSON response
+    // 10. Return JSON response
     return new Response(
       JSON.stringify({
         user: { login: user.login, role: user.role },
@@ -309,11 +278,10 @@ export async function GET(request: Request): Promise<Response> {
         commonFindings,
         errorDetails,
         guidanceHighlights,
-        // New fields
         associateSummaries,
         weekSummaryTable,
         repeatedDefaulters,
-        processLevelFindings,
+        processLevelFindings: null,
         availableWeeks,
         availableMonths,
         availableRegions,
@@ -332,3 +300,4 @@ export async function GET(request: Request): Promise<Response> {
     );
   }
 }
+
