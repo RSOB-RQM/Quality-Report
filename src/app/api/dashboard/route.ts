@@ -1,191 +1,181 @@
+
 // =============================================================================
 // Dashboard Data API Route — GET /api/dashboard
+// MINIMAL TEST — No external imports to isolate the 500 error
 // =============================================================================
 
-import { createDataAccess } from '../../../data/data-access';
-import {
-  computeWeeklySummary,
-  computeMonthlySummary,
-  computeErrorBreakdown,
-  computeDisruptionBreakdown,
-  computeAppealSummary,
-  computeCommonFindings,
-  filterErrorRecords,
-  toErrorDetailRecord,
-  sortErrorLogDesc,
-  computeDefectRate,
-} from '../../../services/aggregation';
-import { highlightGuidance } from '../../../services/guidance';
-import type { AuditRecord } from '../../../models/audit-types';
-import type {
-  AssociateSummaryRow,
-  WeekSummaryTableRow,
-  RepeatedDefaulter,
-  CommonFindingsResult,
-} from '../../../models/dashboard-types';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
-// ---------------------------------------------------------------------------
-// Helpers for new computed fields
-// ---------------------------------------------------------------------------
-
-function countRecordErrors(r: AuditRecord): number {
-  let c = 0;
-  if (r.adm === 'No') c++;
-  if (r.ra === 'No') c++;
-  if (r.rrc === 'No') c++;
-  if (r.acc === 'No') c++;
-  if (r.rv === 'No') c++;
-  return c;
+interface AuditRecord {
+  transactionId: string;
+  team: string;
+  region: string;
+  disruptionType: string;
+  subTransactionType: string;
+  qaMonitoringDate: string;
+  transactionDate: string;
+  associateLogin: string;
+  associateStatus: string;
+  supervisorLogin: string;
+  supervisorEmail: string;
+  transactionWeek: number;
+  subDisruptionType: string;
+  adm: string;
+  admFinding: string;
+  comments1: string;
+  ra: string;
+  raFinding: string;
+  comments2: string;
+  rrc: string;
+  rrcFinding: string;
+  comments3: string;
+  acc: string;
+  accFinding: string;
+  comments4: string;
+  rv: string;
+  rvFinding: string;
+  comments5: string;
+  spResponse: string;
+  spComment: string;
+  spocLogin: string;
+  spocResponse: string;
+  spocComment: string;
+  reAppealFlag: string;
+  reAppealComment: string;
+  appealLeadLogin: string;
+  appealLeadDecision: string;
+  appealLeadComment: string;
+  defectFlag: boolean;
 }
 
-const FINDING_ATTRS: { key: keyof AuditRecord; findingKey: keyof AuditRecord; label: string }[] = [
-  { key: 'adm', findingKey: 'admFinding', label: 'ADM' },
-  { key: 'ra', findingKey: 'raFinding', label: 'RA' },
-  { key: 'rrc', findingKey: 'rrcFinding', label: 'RRC' },
-  { key: 'acc', findingKey: 'accFinding', label: 'ACC' },
-  { key: 'rv', findingKey: 'rvFinding', label: 'RV' },
-];
+// ---------------------------------------------------------------------------
+// Try to read audit-records.json from multiple paths
+// ---------------------------------------------------------------------------
+async function loadRecords(): Promise<AuditRecord[]> {
+  const paths = [
+    join(process.cwd(), 'data', 'audit-records.json'),
+    join(process.cwd(), '.next', 'server', 'data', 'audit-records.json'),
+    '/var/task/data/audit-records.json',
+    '/var/task/.next/server/data/audit-records.json',
+  ];
 
-function buildAssociateSummaries(records: AuditRecord[]): AssociateSummaryRow[] {
-  const map = new Map<string, {
-    audits: number; defects: number; errors: number;
-    attrCounts: Record<string, number>;
-    weekDefects: Map<number, number>;
-    findingCounts: Map<string, { attribute: string; finding: string; count: number }>;
-  }>();
-
-  for (const r of records) {
-    let entry = map.get(r.associateLogin);
-    if (!entry) {
-      entry = { audits: 0, defects: 0, errors: 0, attrCounts: {}, weekDefects: new Map(), findingCounts: new Map() };
-      map.set(r.associateLogin, entry);
-    }
-    entry.audits++;
-    if (r.defectFlag === true) {
-      entry.defects++;
-      entry.weekDefects.set(r.transactionWeek, (entry.weekDefects.get(r.transactionWeek) ?? 0) + 1);
-    }
-    const errs = countRecordErrors(r);
-    entry.errors += errs;
-    for (const attr of FINDING_ATTRS) {
-      if (r[attr.key] === 'No') {
-        entry.attrCounts[attr.label] = (entry.attrCounts[attr.label] ?? 0) + 1;
-        const findingText = r[attr.findingKey] as string;
-        if (findingText && findingText.trim() !== '') {
-          const fKey = `${attr.label}||${findingText}`;
-          const existing = entry.findingCounts.get(fKey);
-          if (existing) {
-            existing.count++;
-          } else {
-            entry.findingCounts.set(fKey, { attribute: attr.label, finding: findingText, count: 1 });
-          }
-        }
-      }
+  for (const p of paths) {
+    try {
+      const raw = await readFile(p, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) return data as AuditRecord[];
+    } catch {
+      continue;
     }
   }
+  return [];
+}
 
-  const result: AssociateSummaryRow[] = [];
-  for (const [login, d] of map) {
-    const weeks = Array.from(d.weekDefects.keys()).sort((a, b) => a - b);
-    let trend: 'improving' | 'regressing' | 'stable' = 'stable';
-    if (weeks.length >= 2) {
-      const last = d.weekDefects.get(weeks[weeks.length - 1]) ?? 0;
-      const prev = d.weekDefects.get(weeks[weeks.length - 2]) ?? 0;
-      if (last < prev) trend = 'improving';
-      else if (last > prev) trend = 'regressing';
+// ---------------------------------------------------------------------------
+// Compute basic stats inline (no external service imports)
+// ---------------------------------------------------------------------------
+function computeDefectRate(defects: number, total: number): number {
+  if (total === 0) return 0;
+  return Math.round((defects / total) * 10000) / 100;
+}
+
+function computeWeeklySummary(records: AuditRecord[]) {
+  const weekMap = new Map<number, { total: number; defects: number }>();
+  for (const r of records) {
+    let entry = weekMap.get(r.transactionWeek);
+    if (!entry) { entry = { total: 0, defects: 0 }; weekMap.set(r.transactionWeek, entry); }
+    entry.total++;
+    if (r.defectFlag) entry.defects++;
+  }
+  return Array.from(weekMap.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([week, d]) => ({ week, totalAudits: d.total, defects: d.defects, defectRate: computeDefectRate(d.defects, d.total) }));
+}
+
+function computeErrorBreakdown(records: AuditRecord[]) {
+  const attrs = ['adm', 'ra', 'rrc', 'acc', 'rv'] as const;
+  const labels: Record<string, string> = { adm: 'ADM', ra: 'RA', rrc: 'RRC', acc: 'ACC', rv: 'RV' };
+  const counts: Record<string, number> = {};
+  for (const attr of attrs) counts[labels[attr]] = 0;
+  for (const r of records) {
+    for (const attr of attrs) {
+      if (r[attr] === 'No') counts[labels[attr]]++;
     }
-    const topFindings = Array.from(d.findingCounts.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-    result.push({
+  }
+  return Object.entries(counts).map(([attribute, count]) => ({ attribute, count }));
+}
+
+function computeDisruptionBreakdown(records: AuditRecord[]) {
+  const map = new Map<string, number>();
+  for (const r of records) {
+    if (r.disruptionType) map.set(r.disruptionType, (map.get(r.disruptionType) ?? 0) + 1);
+  }
+  return Array.from(map.entries()).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count);
+}
+
+function buildAssociateSummaries(records: AuditRecord[]) {
+  const map = new Map<string, { audits: number; defects: number }>();
+  for (const r of records) {
+    let entry = map.get(r.associateLogin);
+    if (!entry) { entry = { audits: 0, defects: 0 }; map.set(r.associateLogin, entry); }
+    entry.audits++;
+    if (r.defectFlag) entry.defects++;
+  }
+  return Array.from(map.entries())
+    .map(([login, d]) => ({
       associateLogin: login,
       totalAudits: d.audits,
       totalDefects: d.defects,
       defectRate: computeDefectRate(d.defects, d.audits),
-      totalErrors: d.errors,
-      errorAttributes: Object.entries(d.attrCounts)
-        .map(([attribute, count]) => ({ attribute, count }))
-        .sort((a, b) => b.count - a.count),
-      trend,
-      topFindings,
-    });
-  }
-  return result.sort((a, b) => b.defectRate - a.defectRate);
+      totalErrors: 0,
+      errorAttributes: [],
+      trend: 'stable' as const,
+      topFindings: [],
+    }))
+    .sort((a, b) => b.defectRate - a.defectRate);
 }
 
-function buildWeekSummaryTable(records: AuditRecord[]): WeekSummaryTableRow[] {
+function buildWeekSummaryTable(records: AuditRecord[]) {
   const weekMap = new Map<number, { audited: number; defects: number }>();
   for (const r of records) {
     let entry = weekMap.get(r.transactionWeek);
-    if (!entry) {
-      entry = { audited: 0, defects: 0 };
-      weekMap.set(r.transactionWeek, entry);
-    }
+    if (!entry) { entry = { audited: 0, defects: 0 }; weekMap.set(r.transactionWeek, entry); }
     entry.audited++;
-    if (r.defectFlag === true) entry.defects++;
+    if (r.defectFlag) entry.defects++;
   }
-
   const weeks = Array.from(weekMap.keys()).sort((a, b) => a - b);
-  const totalAuditsRow: WeekSummaryTableRow = { metric: 'Total Audits', values: [] };
-  const auditsWithDefectsRow: WeekSummaryTableRow = { metric: 'Audits with Defects', values: [] };
-  const defectRateRow: WeekSummaryTableRow = { metric: 'Defect rate%', values: [] };
-
-  for (const week of weeks) {
-    const d = weekMap.get(week)!;
-    totalAuditsRow.values.push({ week, value: d.audited });
-    auditsWithDefectsRow.values.push({ week, value: d.defects });
-    defectRateRow.values.push({ week, value: `${computeDefectRate(d.defects, d.audited)}%` });
-  }
-
-  return [totalAuditsRow, auditsWithDefectsRow, defectRateRow];
+  return [
+    { metric: 'Total Audits', values: weeks.map(w => ({ week: w, value: weekMap.get(w)!.audited })) },
+    { metric: 'Audits with Defects', values: weeks.map(w => ({ week: w, value: weekMap.get(w)!.defects })) },
+    { metric: 'Defect rate%', values: weeks.map(w => ({ week: w, value: `${computeDefectRate(weekMap.get(w)!.defects, weekMap.get(w)!.audited)}%` })) },
+  ];
 }
 
-/**
- * Builds repeated defaulters using rolling last 5 weeks from ALL scoped records.
- * An associate is a repeated defaulter if they had defects in 3+ of the last 5 weeks.
- */
-function buildRepeatedDefaulters(allScopedRecords: AuditRecord[]): RepeatedDefaulter[] {
-  const allWeeks = [...new Set(allScopedRecords.map((r) => r.transactionWeek))].sort((a, b) => a - b);
+function buildRepeatedDefaulters(records: AuditRecord[]) {
+  const allWeeks = [...new Set(records.map(r => r.transactionWeek))].sort((a, b) => a - b);
   const last5Weeks = new Set(allWeeks.slice(-5));
-
-  const recentRecords = allScopedRecords.filter((r) => last5Weeks.has(r.transactionWeek));
+  const recentRecords = records.filter(r => last5Weeks.has(r.transactionWeek));
 
   const map = new Map<string, Map<number, number>>();
   for (const r of recentRecords) {
-    if (r.defectFlag !== true) continue;
+    if (!r.defectFlag) continue;
     if (!map.has(r.associateLogin)) map.set(r.associateLogin, new Map());
     const weekMap = map.get(r.associateLogin)!;
     weekMap.set(r.transactionWeek, (weekMap.get(r.transactionWeek) ?? 0) + 1);
   }
 
-  const result: RepeatedDefaulter[] = [];
+  const result: { associateLogin: string; weeklyDefects: { week: number; defectCount: number }[]; totalWeeksWithDefects: number }[] = [];
   for (const [login, weekMap] of map) {
     if (weekMap.size >= 3) {
-      const weeklyDefects = Array.from(weekMap.entries())
-        .map(([week, defectCount]) => ({ week, defectCount }))
-        .sort((a, b) => a.week - b.week);
-      result.push({ associateLogin: login, weeklyDefects, totalWeeksWithDefects: weekMap.size });
+      result.push({
+        associateLogin: login,
+        weeklyDefects: Array.from(weekMap.entries()).map(([week, defectCount]) => ({ week, defectCount })).sort((a, b) => a.week - b.week),
+        totalWeeksWithDefects: weekMap.size,
+      });
     }
   }
   return result.sort((a, b) => b.totalWeeksWithDefects - a.totalWeeksWithDefects);
-}
-
-function filterByWeeks(records: AuditRecord[], weeks: number[]): AuditRecord[] {
-  if (weeks.length === 0) return records;
-  const set = new Set(weeks);
-  return records.filter((r) => set.has(r.transactionWeek));
-}
-
-function filterByRegion(records: AuditRecord[], region: string): AuditRecord[] {
-  if (!region) return records;
-  return records.filter((r) => r.region === region);
-}
-
-function filterByMonth(records: AuditRecord[], month: number): AuditRecord[] {
-  return records.filter((r) => {
-    const parts = r.transactionDate.split('-');
-    return parseInt(parts[1], 10) === month;
-  });
 }
 
 // ---------------------------------------------------------------------------
@@ -194,90 +184,49 @@ function filterByMonth(records: AuditRecord[], month: number): AuditRecord[] {
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    // 1. Default user (auth bypassed for Amplify deployment)
-    const user = { login: 'mpuranik', role: 'admin' as const };
+    const user = { login: 'mpuranik', role: 'admin' };
 
-    // 2. Fetch all records (no access control filter — admin sees everything)
-    const dataAccess = createDataAccess();
-    const scopedRecords = await dataAccess.getRecords();
+    // Load records
+    const allRecords = await loadRecords();
 
-    // 3. Parse optional week/month/team filters from query params
+    // Parse filters
     const url = new URL(request.url);
     const weeksParam = url.searchParams.get('weeks');
-    const monthParam = url.searchParams.get('month');
-    const teamFilterParam = url.searchParams.get('teamFilter');
     const regionParam = url.searchParams.get('region') ?? '';
 
-    // If admin requests teamFilter=true, filter by supervisorLogin
-    let filteredRecords = scopedRecords;
-    if (teamFilterParam === 'true') {
-      filteredRecords = scopedRecords.filter((r) => r.supervisorLogin === user.login);
-    }
-    filteredRecords = filterByRegion(filteredRecords, regionParam);
+    let filteredRecords = allRecords;
+    if (regionParam) filteredRecords = filteredRecords.filter(r => r.region === regionParam);
     if (weeksParam) {
-      const weeks = weeksParam.split(',').map((w) => parseInt(w.trim(), 10)).filter((n) => !isNaN(n));
-      filteredRecords = filterByWeeks(filteredRecords, weeks);
-    }
-    if (monthParam) {
-      const month = parseInt(monthParam, 10);
-      if (!isNaN(month)) {
-        filteredRecords = filterByMonth(filteredRecords, month);
-      }
+      const weeks = new Set(weeksParam.split(',').map(w => parseInt(w.trim(), 10)).filter(n => !isNaN(n)));
+      filteredRecords = filteredRecords.filter(r => weeks.has(r.transactionWeek));
     }
 
-    // 4. Run all aggregation functions on filtered records
+    // Compute all stats inline
     const weeklySummary = computeWeeklySummary(filteredRecords);
-    const monthlySummary = computeMonthlySummary(filteredRecords);
     const errorBreakdown = computeErrorBreakdown(filteredRecords);
     const disruptionBreakdown = computeDisruptionBreakdown(filteredRecords);
-    const appealSummary = computeAppealSummary(filteredRecords);
-    const commonFindings = computeCommonFindings(filteredRecords);
-
-    // 5. Build error detail log
-    const errorRecords = filterErrorRecords(filteredRecords);
-    const errorDetails = sortErrorLogDesc(errorRecords.map(toErrorDetailRecord));
-
-    // 6. Highlight guidance
-    const allFailedAttributes = [
-      ...new Set(errorDetails.flatMap((e) => e.failedAttributes)),
-    ];
-    const guidanceHighlights = highlightGuidance(allFailedAttributes, []);
-
-    // 7. Role-specific computed fields
     const associateSummaries = buildAssociateSummaries(filteredRecords);
     const weekSummaryTable = buildWeekSummaryTable(filteredRecords);
-    // Repeated defaulters always use rolling last 5 weeks from scoped (region-filtered but NOT week-filtered) data
-    const regionFilteredRecords = filterByRegion(
-      teamFilterParam === 'true'
-        ? scopedRecords.filter((r) => r.supervisorLogin === user.login)
-        : scopedRecords,
-      regionParam,
-    );
-    const repeatedDefaulters = buildRepeatedDefaulters(regionFilteredRecords);
+    const repeatedDefaulters = buildRepeatedDefaulters(allRecords);
 
-    // 8. Available weeks and months for selectors
-    const availableWeeks = [...new Set(scopedRecords.map((r) => r.transactionWeek))].sort((a, b) => a - b);
-    const availableMonths = [...new Set(scopedRecords.map((r) => {
-      const parts = r.transactionDate.split('-');
-      return parseInt(parts[1], 10);
-    }))].sort((a, b) => a - b);
-    const availableRegions = [...new Set(scopedRecords.map((r) => r.region).filter(Boolean))].sort();
+    const availableWeeks = [...new Set(allRecords.map(r => r.transactionWeek))].sort((a, b) => a - b);
+    const availableMonths = [...new Set(allRecords.map(r => {
+      const parts = r.transactionDate?.split('-');
+      return parts ? parseInt(parts[1], 10) : 0;
+    }))].filter(m => m > 0).sort((a, b) => a - b);
+    const availableRegions = [...new Set(allRecords.map(r => r.region).filter(Boolean))].sort();
 
-    // 9. allRecords for admin raw data reference
-    const allRecords = filteredRecords;
-
-    // 10. Return JSON response
     return new Response(
       JSON.stringify({
-        user: { login: user.login, role: user.role },
+        user,
         weeklySummary,
-        monthlySummary,
+        monthlySummary: [],
         errorBreakdown,
         disruptionBreakdown,
-        appealSummary,
-        commonFindings,
-        errorDetails,
-        guidanceHighlights,
+        appealSummary: { total: 0, approved: 0, rejected: 0, pending: 0 },
+        commonFindings: { findings: [] },
+        errorDetails: [],
+        guidanceHighlights: [],
         associateSummaries,
         weekSummaryTable,
         repeatedDefaulters,
@@ -285,17 +234,14 @@ export async function GET(request: Request): Promise<Response> {
         availableWeeks,
         availableMonths,
         availableRegions,
-        allRecords,
+        allRecords: filteredRecords,
       }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      },
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
   } catch (err) {
-    console.error('Dashboard API error:', err);
+    console.error('Dashboard API CRASH:', err);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: String(err) }),
+      JSON.stringify({ error: 'Internal server error', details: String(err), stack: (err as Error).stack }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
