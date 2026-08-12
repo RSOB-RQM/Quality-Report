@@ -1,10 +1,13 @@
+
 // =============================================================================
 // Data Access Layer — Quality Performance Dashboard
+// Reads directly from XLSX file (no JSON conversion needed)
 // =============================================================================
 
-import { readFile, writeFile, rename, access, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, rename, access, mkdir, copyFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import * as XLSX from 'xlsx';
 import type { AuditRecord } from '../models/audit-types';
 import type { RecordFilter } from '../access-control/access-control';
 
@@ -18,8 +21,9 @@ export interface DataAccess {
   upsertRecords(records: AuditRecord[]): Promise<{ added: number; replaced: number }>;
 }
 
-/** Default data file path relative to process.cwd(). */
-const DEFAULT_DATA_PATH = join(process.cwd(), 'data', 'audit-records.json');
+/** Data file paths */
+const XLSX_DATA_PATH = join(process.cwd(), 'data', '[PASSWORD]');
+const JSON_DATA_PATH = join(process.env.NODE_ENV === 'production' ? '/tmp' : join(process.cwd(), 'data'), 'audit-records.json');
 
 /**
  * Builds a composite key for upsert matching.
@@ -29,55 +33,170 @@ function compositeKey(record: AuditRecord): string {
 }
 
 /**
- * Ensures the data file exists, creating it with `[]` if missing.
+ * Parses a single XLSX row into an AuditRecord.
  */
-async function ensureDataFile(filePath: string): Promise<void> {
+function parseXlsxRow(row: Record<string, unknown>): AuditRecord {
+  const safeStr = (val: unknown, fallback = ''): string => {
+    if (val === null || val === undefined || val === '') return fallback;
+    const s = String(val).trim();
+    // Remove .0 from numeric strings
+    if (s.endsWith('.0') && /^\d+\.0$/.test(s)) return s.slice(0, -2);
+    return s;
+  };
+
+  const safeDate = (val: unknown): string => {
+    if (val === null || val === undefined || val === '') return '';
+    if (typeof val === 'number') {
+      // Excel serial date number
+      const date = XLSX.SSF.parse_date_code(val);
+      if (date) {
+        const y = date.y;
+        const m = String(date.m).padStart(2, '0');
+        const d = String(date.d).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    }
+    const s = String(val).trim();
+    // Already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    return s;
+  };
+
+  const defectVal = row['defectFlag'];
+  let defectFlag = false;
+  if (typeof defectVal === 'boolean') defectFlag = defectVal;
+  else if (typeof defectVal === 'string') defectFlag = defectVal.toUpperCase() === 'TRUE';
+  else if (typeof defectVal === 'number') defectFlag = defectVal === 1;
+
+  return {
+    transactionId: safeStr(row['transactionId']),
+    team: safeStr(row['team'], 'RSOB'),
+    region: safeStr(row['region'], 'NA'),
+    disruptionType: safeStr(row['disruptionType']),
+    subTransactionType: safeStr(row['subTransactionType']),
+    qaMonitoringDate: safeDate(row['qaMonitoringDate']),
+    transactionDate: safeDate(row['transactionDate']),
+    associateLogin: safeStr(row['associateLogin']),
+    associateStatus: safeStr(row['associateStatus']),
+    supervisorLogin: safeStr(row['supervisorLogin']),
+    supervisorEmail: safeStr(row['supervisorEmail']),
+    transactionWeek: Number(row['transactionWeek']) || 0,
+    subDisruptionType: safeStr(row['subDisruptionType']),
+    adm: safeStr(row['adm'], 'Yes'),
+    admFinding: safeStr(row['admFinding']),
+    comments1: safeStr(row['comments1']),
+    ra: safeStr(row['ra'], 'Yes'),
+    raFinding: safeStr(row['raFinding']),
+    comments2: safeStr(row['comments2']),
+    rrc: safeStr(row['rrc'], 'Yes'),
+    rrcFinding: safeStr(row['rrcFinding']),
+    comments3: safeStr(row['comments3']),
+    acc: safeStr(row['acc'], 'Yes'),
+    accFinding: safeStr(row['accFinding']),
+    comments4: safeStr(row['comments4']),
+    rv: safeStr(row['rv'], 'Yes'),
+    rvFinding: safeStr(row['rvFinding']),
+    comments5: safeStr(row['comments5']),
+    spResponse: safeStr(row['spResponse']),
+    spComment: safeStr(row['spComment']),
+    spocLogin: safeStr(row['spocLogin']),
+    spocResponse: safeStr(row['spocResponse']),
+    spocComment: safeStr(row['spocComment']),
+    reAppealFlag: safeStr(row['reAppealFlag']),
+    reAppealComment: safeStr(row['reAppealComment']),
+    appealLeadLogin: safeStr(row['appealLeadLogin']),
+    appealLeadDecision: safeStr(row['appealLeadDecision']),
+    appealLeadComment: safeStr(row['appealLeadComment']),
+    defectFlag,
+  };
+}
+
+/**
+ * Reads records from the XLSX file.
+ */
+async function readFromXlsx(): Promise<AuditRecord[]> {
   try {
-    await access(filePath);
+    await access(XLSX_DATA_PATH);
   } catch {
-    await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, '[]', 'utf-8');
+    console.warn('XLSX data file not found at:', XLSX_DATA_PATH);
+    return [];
+  }
+
+  const buffer = await readFile(XLSX_DATA_PATH);
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+
+  // Read from "All Weeks Data" sheet, fallback to first sheet
+  const sheetName = workbook.SheetNames.includes('All Weeks Data')
+    ? 'All Weeks Data'
+    : workbook.SheetNames[0];
+
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet) as Record<string, unknown>[];
+
+  return rows.map(parseXlsxRow);
+}
+
+/**
+ * Reads records from JSON (for upserted data in /tmp).
+ */
+async function readFromJson(): Promise<AuditRecord[]> {
+  try {
+    await access(JSON_DATA_PATH);
+    const raw = await readFile(JSON_DATA_PATH, 'utf-8');
+    return JSON.parse(raw) as AuditRecord[];
+  } catch {
+    return [];
   }
 }
 
 /**
- * Reads all records from the JSON data file.
- */
-async function readRecords(filePath: string): Promise<AuditRecord[]> {
-  await ensureDataFile(filePath);
-  const raw = await readFile(filePath, 'utf-8');
-  return JSON.parse(raw) as AuditRecord[];
-}
-
-/**
- * Writes records to the data file atomically (write temp → rename).
+ * Writes records to JSON atomically.
  */
 async function writeRecordsAtomically(filePath: string, records: AuditRecord[]): Promise<void> {
-  const tempPath = `${filePath}.${randomUUID()}.tmp`;
-  await writeFile(tempPath, JSON.stringify(records, null, 2), 'utf-8');
+  const dir = dirname(filePath);
+  await mkdir(dir, { recursive: true });
+  const tempPath = join(dir, `${randomUUID()}.tmp`);
+  await writeFile(tempPath, JSON.stringify(records), 'utf-8');
   await rename(tempPath, filePath);
 }
 
 /**
- * Creates a DataAccess instance backed by a JSON file.
- * @param dataPath — optional override for the data file location (useful for testing)
+ * Creates a DataAccess instance that reads directly from XLSX.
  */
 export function createDataAccess(dataPath?: string): DataAccess {
-  const filePath = dataPath ?? DEFAULT_DATA_PATH;
+  // Cache parsed XLSX data in memory to avoid re-reading on every request
+  let cachedRecords: AuditRecord[] | null = null;
 
   return {
     async getRecords(filter?: RecordFilter): Promise<AuditRecord[]> {
-      const records = await readRecords(filePath);
-      return filter ? records.filter(filter) : records;
+      if (!cachedRecords) {
+        // Primary: read from XLSX
+        cachedRecords = await readFromXlsx();
+
+        // Merge any upserted records from JSON (uploaded via /api/upload)
+        const upsertedRecords = await readFromJson();
+        if (upsertedRecords.length > 0) {
+          const existingKeys = new Set(cachedRecords.map(compositeKey));
+          for (const r of upsertedRecords) {
+            if (!existingKeys.has(compositeKey(r))) {
+              cachedRecords.push(r);
+            }
+          }
+        }
+      }
+
+      return filter ? cachedRecords.filter(filter) : cachedRecords;
     },
 
     async upsertRecords(records: AuditRecord[]): Promise<{ added: number; replaced: number }> {
-      const existing = await readRecords(filePath);
+      // Read existing (XLSX + any previously upserted JSON)
+      const existing = cachedRecords ?? await readFromXlsx();
+      const upserted = await readFromJson();
+      const allExisting = [...existing, ...upserted];
 
-      // Index existing records by composite key
       const existingMap = new Map<string, number>();
-      for (let i = 0; i < existing.length; i++) {
-        existingMap.set(compositeKey(existing[i]), i);
+      for (let i = 0; i < allExisting.length; i++) {
+        existingMap.set(compositeKey(allExisting[i]), i);
       }
 
       let added = 0;
@@ -87,17 +206,23 @@ export function createDataAccess(dataPath?: string): DataAccess {
         const key = compositeKey(record);
         const idx = existingMap.get(key);
         if (idx !== undefined) {
-          existing[idx] = record;
+          allExisting[idx] = record;
           replaced++;
         } else {
-          existing.push(record);
-          existingMap.set(key, existing.length - 1);
+          allExisting.push(record);
+          existingMap.set(key, allExisting.length - 1);
           added++;
         }
       }
 
-      await writeRecordsAtomically(filePath, existing);
+      // Write only the delta (upserted records) to JSON
+      await writeRecordsAtomically(JSON_DATA_PATH, allExisting);
+
+      // Invalidate cache
+      cachedRecords = null;
+
       return { added, replaced };
     },
   };
 }
+
