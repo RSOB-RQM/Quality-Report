@@ -4,5 +4,5 @@ const nextConfig = {
   serverExternalPackages: ['xlsx'],
 };
 
-module.exports = nextConfig;
+export default nextConfig;
 
