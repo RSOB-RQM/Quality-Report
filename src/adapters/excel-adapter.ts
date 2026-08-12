@@ -1,3 +1,4 @@
+
 // =============================================================================
 // Excel Adapter — Parses uploaded files into AuditRecord format
 // Note: XLSX parsing disabled for Amplify compatibility.
@@ -5,7 +6,7 @@
 // =============================================================================
 
 import type { AuditRecord } from '../models/audit-types';
-type ExcelParseWarning = { row: number; message: string; field?: string };
+import type { ExcelParseWarning } from '../models/dashboard-types';
 
 /**
  * Safely converts a value to string.
@@ -114,7 +115,7 @@ export function createExcelAdapter() {
       }
       return {
         records: [],
-        warnings: [{ row: 0, message: 'Only JSON format is supported in this deployment.' } as ExcelParseWarning],
+        warnings: [{ rowNumber: 0, missingFields: [] } as unknown as ExcelParseWarning],
       };
     },
   };
