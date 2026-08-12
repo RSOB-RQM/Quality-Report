@@ -21,6 +21,7 @@ export interface DataAccess {
 
 /** Data file path */
 const DATA_PATH = join(process.cwd(), 'data', 'audit-records.json');
+const FALLBACK_PATH = join(process.cwd(), '.next', 'server', 'data', 'audit-records.json');
 
 /**
  * Builds a composite key for upsert matching.
