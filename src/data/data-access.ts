@@ -4,7 +4,7 @@
 // Reads directly from XLSX file (no JSON conversion needed)
 // =============================================================================
 
-import { readFile, writeFile, rename, access, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, writeFile, rename, access, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import * as XLSX from 'xlsx';
@@ -22,7 +22,7 @@ export interface DataAccess {
 }
 
 /** Data file paths */
-const XLSX_DATA_PATH = join(process.cwd(), 'data', '[PASSWORD]');
+const XLSX_DATA_PATH = join(process.cwd(), 'data', 'RSOB-All-Weeks-Data-WK1-31.xlsx');
 const JSON_DATA_PATH = join(process.env.NODE_ENV === 'production' ? '/tmp' : join(process.cwd(), 'data'), 'audit-records.json');
 
 /**
@@ -39,7 +39,6 @@ function parseXlsxRow(row: Record<string, unknown>): AuditRecord {
   const safeStr = (val: unknown, fallback = ''): string => {
     if (val === null || val === undefined || val === '') return fallback;
     const s = String(val).trim();
-    // Remove .0 from numeric strings
     if (s.endsWith('.0') && /^\d+\.0$/.test(s)) return s.slice(0, -2);
     return s;
   };
@@ -47,7 +46,6 @@ function parseXlsxRow(row: Record<string, unknown>): AuditRecord {
   const safeDate = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '';
     if (typeof val === 'number') {
-      // Excel serial date number
       const date = XLSX.SSF.parse_date_code(val);
       if (date) {
         const y = date.y;
@@ -57,7 +55,6 @@ function parseXlsxRow(row: Record<string, unknown>): AuditRecord {
       }
     }
     const s = String(val).trim();
-    // Already in YYYY-MM-DD format
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
     return s;
   };
@@ -125,7 +122,6 @@ async function readFromXlsx(): Promise<AuditRecord[]> {
   const buffer = await readFile(XLSX_DATA_PATH);
   const workbook = XLSX.read(buffer, { type: 'buffer' });
 
-  // Read from "All Weeks Data" sheet, fallback to first sheet
   const sheetName = workbook.SheetNames.includes('All Weeks Data')
     ? 'All Weeks Data'
     : workbook.SheetNames[0];
@@ -150,7 +146,7 @@ async function readFromJson(): Promise<AuditRecord[]> {
 }
 
 /**
- * Writes records to JSON atomically.
+ * Writes records to the data file atomically (write temp → rename).
  */
 async function writeRecordsAtomically(filePath: string, records: AuditRecord[]): Promise<void> {
   const dir = dirname(filePath);
@@ -164,16 +160,13 @@ async function writeRecordsAtomically(filePath: string, records: AuditRecord[]):
  * Creates a DataAccess instance that reads directly from XLSX.
  */
 export function createDataAccess(dataPath?: string): DataAccess {
-  // Cache parsed XLSX data in memory to avoid re-reading on every request
   let cachedRecords: AuditRecord[] | null = null;
 
   return {
     async getRecords(filter?: RecordFilter): Promise<AuditRecord[]> {
       if (!cachedRecords) {
-        // Primary: read from XLSX
         cachedRecords = await readFromXlsx();
 
-        // Merge any upserted records from JSON (uploaded via /api/upload)
         const upsertedRecords = await readFromJson();
         if (upsertedRecords.length > 0) {
           const existingKeys = new Set(cachedRecords.map(compositeKey));
@@ -189,7 +182,6 @@ export function createDataAccess(dataPath?: string): DataAccess {
     },
 
     async upsertRecords(records: AuditRecord[]): Promise<{ added: number; replaced: number }> {
-      // Read existing (XLSX + any previously upserted JSON)
       const existing = cachedRecords ?? await readFromXlsx();
       const upserted = await readFromJson();
       const allExisting = [...existing, ...upserted];
@@ -215,10 +207,7 @@ export function createDataAccess(dataPath?: string): DataAccess {
         }
       }
 
-      // Write only the delta (upserted records) to JSON
       await writeRecordsAtomically(JSON_DATA_PATH, allExisting);
-
-      // Invalidate cache
       cachedRecords = null;
 
       return { added, replaced };
