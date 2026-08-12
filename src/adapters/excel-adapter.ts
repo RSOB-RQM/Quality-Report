@@ -100,4 +100,12 @@ function parseRow(row: Record<string, unknown>): AuditRecord {
 }
 
 export { parseRow, safeStr, safeDate };
+/**
+ * Creates an excel adapter instance (for upload-service compatibility).
+ */
+export function createExcelAdapter() {
+  return {
+    parseBuffer: parseExcelBuffer,
+  };
+}
 
