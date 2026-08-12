@@ -1,15 +1,16 @@
 
 // =============================================================================
 // Excel Adapter — Parses uploaded XLSX files into AuditRecord format
+// Uses dynamic import to avoid webpack bundling issues
 // =============================================================================
 
-import * as XLSX from 'xlsx';
 import type { AuditRecord } from '../models/audit-types';
 
 /**
  * Parses an uploaded XLSX buffer into AuditRecord[].
  */
-export function parseExcelBuffer(buffer: Buffer): AuditRecord[] {
+export async function parseExcelBuffer(buffer: Buffer): Promise<AuditRecord[]> {
+  const XLSX = await import('xlsx');
   const workbook = XLSX.read(buffer, { type: 'buffer' });
 
   const sheetName = workbook.SheetNames.includes('All Weeks Data')
@@ -38,12 +39,17 @@ function safeStr(val: unknown, fallback = ''): string {
 function safeDate(val: unknown): string {
   if (val === null || val === undefined || val === '') return '';
   if (typeof val === 'number') {
-    const date = XLSX.SSF.parse_date_code(val);
-    if (date) {
-      const y = date.y;
-      const m = String(date.m).padStart(2, '0');
-      const d = String(date.d).padStart(2, '0');
-      return `${y}-${m}-${d}`;
+    try {
+      const XLSX = require('xlsx');
+      const date = XLSX.SSF.parse_date_code(val);
+      if (date) {
+        const y = date.y;
+        const m = String(date.m).padStart(2, '0');
+        const d = String(date.d).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    } catch {
+      // fallback below
     }
   }
   const s = String(val).trim();
