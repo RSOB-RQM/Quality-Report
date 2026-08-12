@@ -8,25 +8,6 @@
 import type { AuditRecord } from '../models/audit-types';
 
 /**
- * Parses an uploaded buffer into AuditRecord[].
- * Supports JSON format. For XLSX uploads, convert to JSON first.
- */
-export async function parseExcelBuffer(buffer: Buffer): Promise<AuditRecord[]> {
-  // Try parsing as JSON first
-  try {
-    const text = buffer.toString('utf-8');
-    const data = JSON.parse(text);
-    if (Array.isArray(data)) {
-      return data.map(parseRow);
-    }
-  } catch {
-    // Not JSON — return empty with warning
-    console.warn('Upload parsing: Only JSON format is supported in this deployment.');
-  }
-  return [];
-}
-
-/**
  * Safely converts a value to string.
  */
 function safeStr(val: unknown, fallback = ''): string {
@@ -99,13 +80,42 @@ function parseRow(row: Record<string, unknown>): AuditRecord {
   };
 }
 
-export { parseRow, safeStr, safeDate };
+/**
+ * Parses an uploaded buffer into AuditRecord[].
+ * Supports JSON format.
+ */
+export async function parseExcelBuffer(buffer: Buffer): Promise<AuditRecord[]> {
+  try {
+    const text = buffer.toString('utf-8');
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) {
+      return data.map(parseRow);
+    }
+  } catch {
+    console.warn('Upload parsing: Only JSON format is supported in this deployment.');
+  }
+  return [];
+}
+
 /**
  * Creates an excel adapter instance (for upload-service compatibility).
  */
 export function createExcelAdapter() {
   return {
-    parseBuffer: parseExcelBuffer,
+    parse: (file: Buffer): { records: AuditRecord[]; warnings: string[] } => {
+      try {
+        const text = file.toString('utf-8');
+        const data = JSON.parse(text);
+        if (Array.isArray(data)) {
+          return { records: data.map(parseRow), warnings: [] };
+        }
+      } catch {
+        // Not JSON format
+      }
+      return { records: [], warnings: ['Only JSON format is supported in this deployment.'] };
+    },
   };
 }
+
+export { parseRow, safeStr, safeDate };
 
