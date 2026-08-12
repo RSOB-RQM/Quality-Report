@@ -1,26 +1,29 @@
 
 // =============================================================================
-// Excel Adapter — Parses uploaded XLSX files into AuditRecord format
-// Uses dynamic import to avoid webpack bundling issues
+// Excel Adapter — Parses uploaded files into AuditRecord format
+// Note: XLSX parsing disabled for Amplify compatibility.
+// Upload raw JSON or use the pre-loaded audit-records.json instead.
 // =============================================================================
 
 import type { AuditRecord } from '../models/audit-types';
 
 /**
- * Parses an uploaded XLSX buffer into AuditRecord[].
+ * Parses an uploaded buffer into AuditRecord[].
+ * Supports JSON format. For XLSX uploads, convert to JSON first.
  */
 export async function parseExcelBuffer(buffer: Buffer): Promise<AuditRecord[]> {
-  const XLSX = await import('xlsx');
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-
-  const sheetName = workbook.SheetNames.includes('All Weeks Data')
-    ? 'All Weeks Data'
-    : workbook.SheetNames[0];
-
-  const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json(sheet) as Record<string, unknown>[];
-
-  return rows.map(parseRow);
+  // Try parsing as JSON first
+  try {
+    const text = buffer.toString('utf-8');
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) {
+      return data.map(parseRow);
+    }
+  } catch {
+    // Not JSON — return empty with warning
+    console.warn('Upload parsing: Only JSON format is supported in this deployment.');
+  }
+  return [];
 }
 
 /**
@@ -38,20 +41,6 @@ function safeStr(val: unknown, fallback = ''): string {
  */
 function safeDate(val: unknown): string {
   if (val === null || val === undefined || val === '') return '';
-  if (typeof val === 'number') {
-    try {
-      const XLSX = require('xlsx');
-      const date = XLSX.SSF.parse_date_code(val);
-      if (date) {
-        const y = date.y;
-        const m = String(date.m).padStart(2, '0');
-        const d = String(date.d).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-      }
-    } catch {
-      // fallback below
-    }
-  }
   const s = String(val).trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   return s;
