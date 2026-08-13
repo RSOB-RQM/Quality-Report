@@ -1,3 +1,4 @@
+
 version: 1
 frontend:
   phases:
@@ -15,3 +16,13 @@ frontend:
   cache:
     paths:
       - .next/cache/**/*
+customRules:
+  - source: /api/<*>
+    target: /api/<*>
+    status: '200'
+    condition: null
+  - source: /<*>
+    target: /index.html
+    status: '404'
+    condition: null
+
