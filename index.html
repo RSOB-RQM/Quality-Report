@@ -231,8 +231,8 @@ function computeCommonFindingsByWeek(records){
 function computeAssociateSummaries(records,allRecords){
   const map=new Map();
   for(const r of records){
-    if(!map.has(r.associateLogin))map.set(r.associateLogin,{login:r.associateLogin,audits:0,defects:0,errors:[],findings:[]});
-    const x=map.get(r.associateLogin);x.audits++;
+    if(!map.has(r.associateLogin))map.set(r.associateLogin,{login:r.associateLogin,manager:'',audits:0,defects:0,errors:[],findings:[]});
+    const x=map.get(r.associateLogin);x.audits++;if(!x.manager&&r.supervisorLogin)x.manager=r.supervisorLogin;
     if(r.defectFlag)x.defects++;
     for(const attr of ATTRS){if(r[attr.key]==='No'){x.errors.push(attr.label);const f=r[attr.fKey];const c=r[attr.cKey]||'';if(f)x.findings.push({attribute:attr.label,finding:f,comment:c});}}
   }
@@ -252,7 +252,7 @@ function computeAssociateSummaries(records,allRecords){
     const weeks=computeWeeklySummary(records.filter(r=>r.associateLogin===login));
     let trend='stable';
     if(weeks.length>=2){const last=weeks[weeks.length-1];const prev=weeks[weeks.length-2];const lr=computeRate(last.totalDefects,last.totalAudited);const pr=computeRate(prev.totalDefects,prev.totalAudited);if(lr<pr)trend='improving';else if(lr>pr)trend='regressing';}
-    result.push({associateLogin:login,totalAudits:d.audits,totalDefects:d.defects,defectRate:rate,errorAttributes,topFindings,trend});
+    result.push({associateLogin:login,managerLogin:d.manager,totalAudits:d.audits,totalDefects:d.defects,defectRate:rate,errorAttributes,topFindings,trend});
   }
   return result.sort((a,b)=>b.defectRate-a.defectRate);
 }
@@ -882,7 +882,7 @@ function renderAssociateSummary(summaries,repeatedDefaulters){
         }
       }
     }
-    let html=`<tr style="${rowBg}"><td>${row.associateLogin}${isDefaulter?'<span class="repeat-badge">REPEAT</span>':''}</td><td>${row.totalAudits}</td><td style="font-weight:600">${row.totalDefects}</td><td style="font-weight:600;color:${rateColor(row.defectRate)};background:${rateBg(row.defectRate)}">${row.defectRate}%</td><td>${badges}</td><td style="font-weight:600;color:${t.color}">${t.icon}</td><td>${expandBtn}</td>`;
+    let html=`<tr style="${rowBg}"><td>${row.associateLogin}${isDefaulter?'<span class="repeat-badge">REPEAT</span>':''}</td><td style="color:#6366f1;font-weight:500">${row.managerLogin||''}</td><td>${row.totalAudits}</td><td style="font-weight:600">${row.totalDefects}</td><td style="font-weight:600;color:${rateColor(row.defectRate)};background:${rateBg(row.defectRate)}">${row.defectRate}%</td><td>${badges}</td><td style="font-weight:600;color:${t.color}">${t.icon}</td><td>${expandBtn}</td>`;
     if(isManagerOrAdmin){
       html+=`<td>${actionsCell}</td><td>${statusCell}</td>`;
     }
@@ -898,7 +898,7 @@ function renderAssociateSummary(summaries,repeatedDefaulters){
     return html;
   }).join('');
   var actionsHeader=isManagerOrAdmin?'<th>Actions</th><th>Status</th>':'';
-  return`<div class="section"><div class="flex-between mb-16"><h3>Associate-wise Summary</h3><button class="csv-btn" onclick="downloadAssociateSummary()">📥 Download CSV</button></div><p class="text-muted mb-8">${summaries.length} associates · ${summaries.reduce((s,r)=>s+r.totalAudits,0)} total audits</p><div style="overflow-x:auto"><table><thead><tr><th class="sort-header" onclick="sortAssociates('associateLogin')">Associate${sortInd('associateLogin')}</th><th class="sort-header" onclick="sortAssociates('totalAudits')">Total Audits${sortInd('totalAudits')}</th><th class="sort-header" onclick="sortAssociates('totalDefects')">Defects${sortInd('totalDefects')}</th><th class="sort-header" onclick="sortAssociates('defectRate')">Defect Rate${sortInd('defectRate')}</th><th>Top Errors</th><th>Trend</th><th>Details</th>${actionsHeader}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  return`<div class="section"><div class="flex-between mb-16"><h3>Associate-wise Summary</h3><button class="csv-btn" onclick="downloadAssociateSummary()">📥 Download CSV</button></div><p class="text-muted mb-8">${summaries.length} associates · ${summaries.reduce((s,r)=>s+r.totalAudits,0)} total audits</p><div style="overflow-x:auto"><table><thead><tr><th class="sort-header" onclick="sortAssociates('associateLogin')">Associate${sortInd('associateLogin')}</th><th class="sort-header" onclick="sortAssociates('managerLogin')">Manager${sortInd('managerLogin')}</th><th class="sort-header" onclick="sortAssociates('totalAudits')">Total Audits${sortInd('totalAudits')}</th><th class="sort-header" onclick="sortAssociates('totalDefects')">Defects${sortInd('totalDefects')}</th><th class="sort-header" onclick="sortAssociates('defectRate')">Defect Rate${sortInd('defectRate')}</th><th>Top Errors</th><th>Trend</th><th>Details</th>${actionsHeader}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function renderRepeatedDefaulters(defaulters){
